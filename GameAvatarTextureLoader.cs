@@ -81,10 +81,11 @@ internal static class GameAvatarTextureLoader
     private static TextureModel LoadTexture(string path, bool isColor)
     {
         if (Path.GetExtension(path).Equals(".ktx", StringComparison.OrdinalIgnoreCase)
-            && GameTextureLoader.BuildDdsFromKtx(path) is { } dds)
+            && GameTextureLoader.BuildDdsFromKtx(path, isColor) is { } dds)
         {
-            // Preserve the game's BC format, sRGB/linear sampling mode, and
-            // authored mip chain. Avatar shaders explicitly sample Noise2Ch
+            // Preserve the game's BC block data and authored mip chain, while
+            // selecting sRGB/linear sampling from the Avatar material slot.
+            // Avatar shaders explicitly sample Noise2Ch
             // at high LODs, so rebuilding mips from only the top bitmap changes
             // glitter and cape-integrity masks.
             return new TextureModel(new MemoryStream(dds, writable: false));

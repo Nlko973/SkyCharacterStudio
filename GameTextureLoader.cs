@@ -61,7 +61,7 @@ internal static class GameTextureLoader
     /// DX10 DDS container. The GPU then samples the original BC blocks and
     /// sRGB format instead of a decoded top mip with regenerated filtering.
     /// </summary>
-    public static byte[]? BuildDdsFromKtx(string texturePath)
+    public static byte[]? BuildDdsFromKtx(string texturePath, bool isColor)
     {
         var raw = File.ReadAllBytes(texturePath);
         if (raw.Length < 68 || !raw.AsSpan(0, KtxIdentifier.Length).SequenceEqual(KtxIdentifier)
@@ -83,14 +83,19 @@ internal static class GameTextureLoader
 
         var (dxgiFormat, blockBytes, bytesPerPixel) = internalFormat switch
         {
-            GlCompressedRgbaBptcUnorm => (98u, 16, 0),
-            GlCompressedSrgbAlphaBptcUnorm => (99u, 16, 0),
+            GlCompressedRgbaBptcUnorm or GlCompressedSrgbAlphaBptcUnorm => (98u, 16, 0),
             GlCompressedRedRgtc1 => (80u, 8, 0),
-            GlRgba8 when glType == GlUnsignedByte && glFormat == GlRgba => (28u, 0, 4),
-            GlSrgb8Alpha8 when glType == GlUnsignedByte && glFormat == GlRgba => (29u, 0, 4),
+            GlRgba8 or GlSrgb8Alpha8 when glType == GlUnsignedByte && glFormat == GlRgba => (28u, 0, 4),
             _ => (0u, 0, 0),
         };
         if (dxgiFormat == 0) return null;
+
+        // KTX's transfer-function tag describes how the source was stored, but
+        // Avatar slots define how the shader interprets the bytes. Diffuse is
+        // sampled as sRGB color; masks, normals and packed attributes are
+        // numeric data and must stay linear even when the container says sRGB.
+        if (dxgiFormat is 98 or 28)
+            dxgiFormat = isColor ? (dxgiFormat == 98 ? 99u : 29u) : dxgiFormat;
 
         var levels = new List<byte[]>(storedMipCount);
         var cursor = checked(64 + keyValueBytes);

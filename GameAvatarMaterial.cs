@@ -166,10 +166,9 @@ internal sealed class GameAvatarMaterialVariable : MaterialVariable
             else if (binding.Stage.Equals("Fragment", StringComparison.OrdinalIgnoreCase))
                 deviceContext.SetShaderResource(HelixToolkit.SharpDX.Shaders.PixelShader.Type, binding.Slot, view.TextureView);
         }
-        // The official glass shader refracts the opaque scene. Helix renders
-        // transparent layers into separate OIT targets, leaving the opaque
-        // color buffer available for sampling during either OIT algorithm.
-        if (context.OITRenderStage is OITRenderStage.SinglePassWeighted or OITRenderStage.DepthPeeling
+        // The official glass shader refracts the opaque scene. In the weighted
+        // transparency pass, its target is separate from the opaque color.
+        if (context.OITRenderStage == OITRenderStage.SinglePassWeighted
             && context.RenderHost.RenderBuffer?.ColorBuffer?.TextureView is { } opaqueColor)
         {
             foreach (var binding in _program.Bindings.Where(binding =>

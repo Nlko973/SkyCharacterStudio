@@ -14,7 +14,10 @@ namespace SkyCharacterStudio;
 /// </summary>
 internal static class GameAvatarGeometryAdapter
 {
-    public static MeshGeometry3D Create(MeshData data, WpfTransform3D? itemTransform = null)
+    public static MeshGeometry3D Create(
+        MeshData data,
+        WpfTransform3D? itemTransform = null,
+        System.Windows.Media.Media3D.Point3DCollection? posedPositions = null)
     {
         var count = data.Vertices.Count;
         var geometry = new MeshGeometry3D
@@ -28,9 +31,12 @@ internal static class GameAvatarGeometryAdapter
             TriangleIndices = new IntCollection(data.Indices.Count * 3),
         };
 
-        foreach (var (x, y, z) in data.Vertices)
+        for (var i = 0; i < count; i++)
         {
-            var position = new System.Windows.Media.Media3D.Point3D(-x, y, -z);
+            var (x, y, z) = data.Vertices[i];
+            var position = posedPositions is { Count: > 0 } && posedPositions.Count == count
+                ? posedPositions[i]
+                : new System.Windows.Media.Media3D.Point3D(-x, y, -z);
             if (itemTransform is not null) position = itemTransform.Transform(position);
             geometry.Positions.Add(new Vector3((float)position.X, (float)position.Y, (float)position.Z));
         }

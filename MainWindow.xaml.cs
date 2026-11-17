@@ -971,6 +971,7 @@ public partial class MainWindow : Window
                 var matrices = BuildAvatarShaderMatrices();
                 var textures = GameAvatarTextureLoader.LoadForItem(partItem);
                 var buffers = GameAvatarUniformBuffers.Create(shader, values, matrices);
+                var posedPositions = _animatedMeshes.FirstOrDefault(binding => ReferenceEquals(binding.Data, part.MeshData))?.Geometry.Positions;
                 foreach (var field in shader.UniformBlocks.SelectMany(block => block.Fields))
                 {
                     if (field.Name.Contains("Dye", StringComparison.OrdinalIgnoreCase)) dyeUniformNames.Add(field.Name);
@@ -990,7 +991,7 @@ public partial class MainWindow : Window
                     // The game Avatar shader consumes object-space positions and this
                     // viewport supplies identity u_model. Bake the OutfitDefs attachment
                     // transform into the geometry so SPIR-V and WPF previews agree.
-                    Geometry = GameAvatarGeometryAdapter.Create(part.MeshData, BuildPartTransform(part, parts, bodyBounds)),
+                    Geometry = GameAvatarGeometryAdapter.Create(part.MeshData, BuildPartTransform(part, parts, bodyBounds), posedPositions),
                     Material = new GameAvatarMaterial(materialCore),
                     IsTransparent = GameAvatarEffectsManager.IsBlendedAvatarShader(shader),
                     IsThrowingShadow = false,
