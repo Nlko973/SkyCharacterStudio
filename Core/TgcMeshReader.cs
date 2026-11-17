@@ -98,9 +98,9 @@ public static class TgcMeshReader
         var loadInfo2 = dest[p++] != 0;
         p += 1;
 
-        var skipMeshPos = ReadUInt32(dest, ref p);
-        var skipUvs = ReadUInt32(dest, ref p);
-        var flag3 = ReadUInt32(dest, ref p);
+        var zipPosition = ReadUInt32(dest, ref p);
+        var zipUvA = ReadUInt32(dest, ref p);
+        var zipUvB = ReadUInt32(dest, ref p);
         p += 0x10;
 
         var faceCount = (int)totalVertices / 3;
@@ -108,7 +108,7 @@ public static class TgcMeshReader
 
         var vertices = new List<(float X, float Y, float Z)>((int)sharedVertices);
         var packedVertexAttrs = new List<(byte B0, byte B1, byte B2, byte B3)>((int)sharedVertices);
-        if (skipMeshPos == 0)
+        if (zipPosition == 0)
         {
             for (var i = 0; i < sharedVertices; i++)
             {
@@ -136,7 +136,7 @@ public static class TgcMeshReader
         var uv1 = new List<(float U, float V)>((int)sharedVertices);
         var uv2 = new List<(float U, float V)>((int)sharedVertices);
         var uv3 = new List<(float U, float V)>((int)sharedVertices);
-        if (skipUvs == 0)
+        if (zipUvA == 0)
         {
             for (var i = 0; i < sharedVertices; i++)
             {
@@ -226,7 +226,7 @@ public static class TgcMeshReader
 
         p += faceCount * 4;
 
-        if (skipMeshPos > 0)
+        if (zipPosition > 0)
         {
             var ax = aabbA2.X;
             var ay = aabbA2.Y;
@@ -249,46 +249,46 @@ public static class TgcMeshReader
             }
 
             p += (int)sharedVertices * 4;
+
+            // ZipPos replaces the ordinary RGBA bytes with one auxiliary
+            // alpha byte per vertex. The guide's validated interpretation is
+            // white RGB plus this source alpha; never read ZipUV B as color.
+            for (var i = 0; i < sharedVertices; i++)
+                packedVertexAttrs.Add((255, 255, 255, dest[p + i]));
             p += (int)sharedVertices;
         }
 
-        if (skipUvs > 0)
+        if (zipUvA > 0)
         {
-            var uvMinU = quantMin[0];
-            var uvMinV = quantMin[1];
-            var uvSizeU = quantMax[0] - uvMinU;
-            var uvSizeV = quantMax[1] - uvMinV;
-
             for (var i = 0; i < sharedVertices; i++)
             {
                 var off = p + (i * 4);
-                var uHi = dest[off];
-                var vHi = dest[off + 1];
-                var uLo = dest[off + 2];
-                var vLo = dest[off + 3];
-
-                var uNorm = (((uHi << 8) | uLo) / 65535.0f);
-                var vNorm = (((vHi << 8) | vLo) / 65535.0f);
-                var u = uvMinU + (uNorm * uvSizeU);
-                var v = uvMinV + (vNorm * uvSizeV);
-                uv0.Add((u, v));
+                // ZipUV A stores UV0 and UV2 as four independent UNORM8
+                // components. UV1/UV3 live in the separate ZipUV B stream.
+                uv0.Add((DecodeQuantizedUv(dest[off], 0), DecodeQuantizedUv(dest[off + 1], 1)));
+                uv2.Add((DecodeQuantizedUv(dest[off + 2], 4), DecodeQuantizedUv(dest[off + 3], 5)));
             }
 
             p += (int)sharedVertices * 4;
         }
 
-        if (flag3 > 0)
+        if (zipUvB > 0)
         {
-            if (packedVertexAttrs.Count == 0)
+            for (var i = 0; i < sharedVertices; i++)
             {
-                for (var i = 0; i < sharedVertices; i++)
-                {
-                    var off = p + (i * 4);
-                    packedVertexAttrs.Add((dest[off], dest[off + 1], dest[off + 2], dest[off + 3]));
-                }
+                var off = p + (i * 4);
+                // ZipUV B stores UV1 and UV3; keep their ranges distinct.
+                uv1.Add((DecodeQuantizedUv(dest[off], 2), DecodeQuantizedUv(dest[off + 1], 3)));
+                uv3.Add((DecodeQuantizedUv(dest[off + 2], 6), DecodeQuantizedUv(dest[off + 3], 7)));
             }
 
             p += (int)sharedVertices * 4;
+        }
+
+        float DecodeQuantizedUv(byte value, int component)
+        {
+            var minimum = quantMin[component];
+            return minimum + value / 255.0f * (quantMax[component] - minimum);
         }
 
         var embeddedSkeleton = animated && embeddedSkeletonRaw.Length >= 85
