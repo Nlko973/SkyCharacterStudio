@@ -132,6 +132,32 @@ internal sealed class GameAvatarMaterialVariable : MaterialVariable
     public override bool BindMaterialResources(RenderContext context, DeviceContextProxy deviceContext, ShaderPass shaderPass)
     {
         Interlocked.Increment(ref ResourceBindCount);
+        // Use the matrices that Helix actually used for this render target.
+        // The side-by-side WPF viewport can be resized or collapsed while a
+        // shader load is in flight, so cached WPF dimensions can otherwise
+        // produce a different projection and apparent model size.
+        var sourceView = context.ViewMatrix;
+        var viewMatrix = new Matrix4x4(
+            sourceView.M11, sourceView.M12, sourceView.M13, sourceView.M14,
+            sourceView.M21, sourceView.M22, sourceView.M23, sourceView.M24,
+            sourceView.M31, sourceView.M32, sourceView.M33, sourceView.M34,
+            sourceView.M41, sourceView.M42, sourceView.M43, sourceView.M44);
+        var sourceProjection = context.ProjectionMatrix;
+        var projection = new Matrix4x4(
+            sourceProjection.M11, sourceProjection.M12, sourceProjection.M13, sourceProjection.M14,
+            sourceProjection.M21, sourceProjection.M22, sourceProjection.M23, sourceProjection.M24,
+            sourceProjection.M31, sourceProjection.M32, sourceProjection.M33, sourceProjection.M34,
+            sourceProjection.M41, sourceProjection.M42, sourceProjection.M43, sourceProjection.M44);
+        var viewProjection = viewMatrix * projection;
+        Matrix4x4.Invert(viewProjection, out var inverseViewProjection);
+        _material.UpdateMatrices(new Dictionary<string, Matrix4x4>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["u_model"] = Matrix4x4.Identity,
+            ["u_view"] = viewMatrix,
+            ["u_proj"] = projection,
+            ["u_viewProj"] = viewProjection,
+            ["u_viewProjInv"] = inverseViewProjection,
+        });
         _constantBuffers.Upload(deviceContext);
         foreach (var (binding, view) in _textures)
         {
