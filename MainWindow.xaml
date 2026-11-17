@@ -1,0 +1,234 @@
+﻿<Window x:Class="SkyCharacterStudio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:hx="http://helix-toolkit.org/wpf/SharpDX"
+        Title="Sky Character Studio" Icon="pack://application:,,,/Assets/SkyCharacterStudio.ico" Width="1440" Height="900" MinWidth="1120" MinHeight="700"
+        Background="{DynamicResource Canvas}" Foreground="{DynamicResource TextPrimary}">
+  <Grid Margin="18">
+    <Grid.RowDefinitions><RowDefinition Height="58"/><RowDefinition Height="14"/><RowDefinition Height="*"/><RowDefinition Height="38"/></Grid.RowDefinitions>
+    <Border Grid.Row="0" Background="{DynamicResource Panel}" CornerRadius="14" Padding="18,0">
+      <DockPanel LastChildFill="False" VerticalAlignment="Center">
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+          <Border Width="34" Height="34" CornerRadius="10" Background="{DynamicResource PanelRaised}" Margin="0,0,11,0" ClipToBounds="True">
+            <Image Source="pack://application:,,,/Assets/SkyCharacterStudio.png" Stretch="UniformToFill"/>
+          </Border>
+          <TextBlock Text="SKY CHARACTER STUDIO" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+          <TextBlock Text="  /  EDITOR" Foreground="{DynamicResource TextMuted}" FontSize="11" VerticalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+          <Button Content="⚙" Click="Settings_Click" Margin="9,0,0,0" Width="40" Height="36" FontSize="17" ToolTip="Settings" AutomationProperties.Name="Settings"/>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+    <Grid Grid.Row="2">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="280"/></Grid.ColumnDefinitions>
+      <Border Grid.Column="0" Background="{DynamicResource Panel}" CornerRadius="14" Padding="16">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="{Binding UiText[wardrobe]}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" Margin="2,0,0,13"/>
+            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding UiText[search]}" />
+            <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory, Mode=TwoWay}" Margin="0,8,0,0" Padding="9,7" Background="{DynamicResource PanelRaised}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0">
+              <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextPrimary}"/></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox ItemsSource="{Binding Subcategories}" SelectedItem="{Binding SelectedSubcategory, Mode=TwoWay}" Visibility="{Binding SubcategoryVisibility}" Margin="0,6,0,0" Padding="9,7" Background="{DynamicResource PanelRaised}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0">
+              <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextPrimary}"/></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox ItemsSource="{Binding Seasons}" SelectedItem="{Binding SelectedSeason, Mode=TwoWay}" Margin="0,6,0,0" Padding="9,7" Background="{DynamicResource PanelRaised}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" ToolTip="Filter items by season">
+              <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextPrimary}"/></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Content="{Binding UiText[view]}" Click="ViewSelected_Click" IsEnabled="{Binding CanViewSelected}" Margin="0,10,0,0" HorizontalContentAlignment="Center"/>
+            <Button Content="{Binding OwnedButtonText}" Click="ToggleOwned_Click" Margin="0,7,0,0" HorizontalContentAlignment="Center"/>
+            <Button Content="{Binding FavoriteButtonText}" Click="ToggleFavorite_Click" Margin="0,7,0,0" HorizontalContentAlignment="Center"/>
+            <Button Content="{Binding BuiltInShoesButtonText}" Click="TagBuiltInShoes_Click" IsEnabled="{Binding CanMarkBuiltInShoes}" Margin="0,7,0,0" HorizontalContentAlignment="Center"/>
+            <TextBlock Text="{Binding CatalogSummary}" Foreground="{DynamicResource TextMuted}" FontSize="11" Margin="3,10,0,10"/>
+            <DockPanel Margin="0,0,0,8">
+              <Button Content="‹ Previous" Click="PreviousPage_Click" Padding="8,5" DockPanel.Dock="Left"/>
+              <Button Content="Next ›" Click="NextPage_Click" Padding="8,5" DockPanel.Dock="Right"/>
+              <TextBlock Text="{Binding PageIndicator}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}"/>
+            </DockPanel>
+          </StackPanel>
+          <ListBox ItemsSource="{Binding WardrobeItems}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel IsItemsHost="True"/></ItemsPanelTemplate></ListBox.ItemsPanel>
+            <ListBox.ItemContainerStyle>
+              <Style TargetType="ListBoxItem">
+                <Setter Property="Width" Value="76"/><Setter Property="Height" Value="112"/><Setter Property="Padding" Value="4"/><Setter Property="Margin" Value="2"/>
+                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="8" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Bd" Property="Background" Value="#34304D"/><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="#292D3D"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+              </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate><DataTemplate><Grid>
+              <StackPanel>
+                <Border Height="62" Background="{DynamicResource PanelRaised}" CornerRadius="6" Margin="0,0,0,4"><Image Source="{Binding IconImage}" Stretch="Uniform" Margin="3"/></Border>
+                <TextBlock Text="{Binding DisplayName}" FontSize="9" TextAlignment="Center" TextWrapping="Wrap" MaxHeight="30" TextTrimming="CharacterEllipsis"/>
+                <DockPanel Margin="0,2,0,0"><Border Width="8" Height="8" CornerRadius="4" Background="{Binding PreviewColorBrush}" VerticalAlignment="Center" Margin="1,0,3,0" ToolTip="{Binding PreviewColorDetails}"/><TextBlock Text="{Binding Availability}" FontSize="8" Foreground="{DynamicResource TextMuted}" TextAlignment="Center"/></DockPanel>
+              </StackPanel>
+              <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="{DynamicResource Accent}" CornerRadius="7" Padding="3,0" Visibility="{Binding IsOwned, Converter={StaticResource BooleanToVisibilityConverter}}"><TextBlock Text="✓" Foreground="#151320" FontSize="10" FontWeight="Bold"/></Border>
+              <Border HorizontalAlignment="Left" VerticalAlignment="Top" Background="#E84767" CornerRadius="7" Padding="3,0" Visibility="{Binding IsFavorite, Converter={StaticResource BooleanToVisibilityConverter}}"><TextBlock Text="♥" Foreground="White" FontSize="9"/></Border>
+              <Border HorizontalAlignment="Center" VerticalAlignment="Top" Background="#28A879" CornerRadius="7" Padding="3,0" Visibility="{Binding IsEquipped, Converter={StaticResource BooleanToVisibilityConverter}}"><TextBlock Text="✓" Foreground="White" FontSize="9" FontWeight="Bold"/></Border>
+              <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="#262332" BorderBrush="{DynamicResource Accent}" BorderThickness="1" CornerRadius="7" Padding="3,0" ToolTip="Dyeable in Sky" Visibility="{Binding IsDyeable, Converter={StaticResource BooleanToVisibilityConverter}}"><TextBlock Text="✦" Foreground="{DynamicResource Accent}" FontSize="8" FontWeight="Bold"/></Border>
+            </Grid></DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
+      <Border x:Name="SceneBorder" Grid.Column="2" Background="{DynamicResource Panel}" CornerRadius="14" ClipToBounds="True">
+        <Grid x:Name="SceneLayer" Background="{DynamicResource Panel}">
+          <Viewport3D x:Name="Viewport" ClipToBounds="True" MouseDown="Viewport_MouseDown" MouseUp="Viewport_MouseUp" MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel">
+            <Viewport3D.Camera><PerspectiveCamera x:Name="Camera" Position="0,0,5" LookDirection="0,0,-5" UpDirection="0,1,0" FieldOfView="45"/></Viewport3D.Camera>
+            <ModelVisual3D><ModelVisual3D.Content><Model3DGroup><AmbientLight x:Name="AmbientSceneLight" Color="#777D91"/><DirectionalLight x:Name="KeySceneLight" Color="#FFF4E8" Direction="-1,-2,-3"/><DirectionalLight x:Name="FillSceneLight" Color="#7777BB" Direction="2,1,2"/></Model3DGroup></ModelVisual3D.Content></ModelVisual3D>
+            <ModelVisual3D x:Name="MeshVisual" />
+          </Viewport3D>
+          <hx:Viewport3DX x:Name="GameShaderViewport" Visibility="Collapsed" ShowViewCube="False" ClipToBounds="True" BackgroundColor="#10121A" MouseDown="Viewport_MouseDown" MouseUp="Viewport_MouseUp" MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel">
+            <hx:Viewport3DX.Camera><hx:PerspectiveCamera x:Name="GameShaderCamera" Position="0,0,5" LookDirection="0,0,-5" UpDirection="0,1,0" FieldOfView="45"/></hx:Viewport3DX.Camera>
+            <hx:GroupModel3D x:Name="GameShaderMeshVisual" />
+          </hx:Viewport3DX>
+          <Border x:Name="SceneModeBadge" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="16" Background="#CC191C27" CornerRadius="8" Padding="11,7"><TextBlock Text="{Binding SceneMode}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMuted}"/></Border>
+          <StackPanel x:Name="SceneActions" Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="16">
+            <CheckBox x:Name="ChibiModeToggle" Content="{Binding UiText[chibi_mode]}" VerticalAlignment="Center" Margin="0,0,12,0" ToolTip="{Binding UiText[chibi_help]}" Checked="ChibiMode_Changed" Unchecked="ChibiMode_Changed"/>
+            <Button Content="📷  Save photo" Click="SaveScenePhoto_Click" Padding="11,7"/>
+          </StackPanel>
+          <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+            <TextBlock Text="✦" FontSize="42" Foreground="{DynamicResource Accent}" HorizontalAlignment="Center"/>
+            <TextBlock Text="No character scene is loaded" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,10,0,4"/>
+            <TextBlock Text="Choose the Sky game folder in Settings to load the outfit preview" FontSize="12" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center"/>
+          </StackPanel>
+          <Border x:Name="SceneFooterHint" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="14" Background="#CC191C27" CornerRadius="8" Padding="10,6"><TextBlock Text="Drag to orbit · Wheel to zoom" FontSize="10" Foreground="{DynamicResource TextMuted}"/></Border>
+        </Grid>
+      </Border>
+      <Border Grid.Column="4" Background="{DynamicResource Panel}" CornerRadius="14" Padding="17">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+          <TextBlock Text="{Binding UiText[inspector]}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" Margin="0,0,0,17"/>
+          <TextBlock Text="{Binding UiText[collection]}" FontSize="10" Foreground="{DynamicResource TextMuted}"/>
+          <TextBlock Text="{Binding OwnedSummary}" FontSize="12" Margin="0,5,0,8"/>
+          <Button Content="{Binding UiText[random]}" Click="RandomOutfit_Click" HorizontalContentAlignment="Center" Margin="0,0,0,12"/>
+          <TextBlock Text="{Binding UiText[saved_outfits]}" FontSize="10" Foreground="{DynamicResource TextMuted}"/>
+          <TextBox Text="{Binding OutfitName, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,6"/>
+          <Button Content="{Binding UiText[save_outfit]}" Click="SaveOutfit_Click" HorizontalContentAlignment="Center"/>
+          <ScrollViewer Height="238" VerticalScrollBarVisibility="Auto" Margin="0,4,0,10">
+            <ItemsControl ItemsSource="{Binding SavedOutfits}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Border Width="112" Height="112" Background="{DynamicResource PanelRaised}" BorderBrush="#40475A" BorderThickness="1" CornerRadius="10" Padding="5" Margin="2">
+                  <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="54"/><RowDefinition Height="22"/><RowDefinition Height="26"/></Grid.RowDefinitions>
+                    <Image Grid.Row="0" Source="{Binding Thumbnail}" Stretch="Uniform"/>
+                    <TextBlock Grid.Row="1" Text="{Binding Name}" FontSize="9" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Name}"/>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                      <Button Content="⤓" Tag="{Binding}" Click="LoadSavedLook_Click" Width="26" Height="26" Padding="0" FontSize="14" ToolTip="{Binding DataContext.UiText[load_saved], RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="Load saved look"/>
+                      <Button Content="↗" Tag="{Binding}" Click="ExportLook_Click" Width="26" Height="26" Padding="0" FontSize="13" Margin="4,0,0,0" ToolTip="Export this look" AutomationProperties.Name="Export saved look"/>
+                      <Button Content="×" Tag="{Binding}" Click="DeleteSavedLook_Click" Width="26" Height="26" Padding="0" FontSize="15" Margin="4,0,0,0" ToolTip="{Binding DataContext.UiText[delete_saved], RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="Delete saved look"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <Border Background="{DynamicResource PanelRaised}" CornerRadius="10" Padding="11" Margin="0,0,0,12">
+            <StackPanel>
+              <TextBlock Text="LIGHTING STUDIO" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Accent}" Margin="0,0,0,8"/>
+              <DockPanel><TextBlock Text="Ambient" FontSize="10"/><TextBlock Text="Intensity" FontSize="9" Foreground="{DynamicResource TextMuted}" DockPanel.Dock="Right"/></DockPanel>
+              <Slider x:Name="AmbientIntensitySlider" Minimum="0" Maximum="2" Value="0.8" TickFrequency="0.1" ValueChanged="Lighting_Changed"/>
+              <DockPanel><TextBlock Text="Key light" FontSize="10"/><TextBlock Text="Intensity" FontSize="9" Foreground="{DynamicResource TextMuted}" DockPanel.Dock="Right"/></DockPanel>
+              <Slider x:Name="KeyIntensitySlider" Minimum="0" Maximum="2" Value="1" TickFrequency="0.1" ValueChanged="Lighting_Changed"/>
+              <DockPanel><TextBlock Text="Fill light" FontSize="10"/><TextBlock Text="Intensity" FontSize="9" Foreground="{DynamicResource TextMuted}" DockPanel.Dock="Right"/></DockPanel>
+              <Slider x:Name="FillIntensitySlider" Minimum="0" Maximum="2" Value="0.55" TickFrequency="0.1" ValueChanged="Lighting_Changed"/>
+              <DockPanel><TextBlock Text="Azimuth" FontSize="10"/><TextBlock Text="Elevation" FontSize="9" Foreground="{DynamicResource TextMuted}" DockPanel.Dock="Right"/></DockPanel>
+              <Slider x:Name="LightAzimuthSlider" Minimum="-180" Maximum="180" Value="-20" ValueChanged="Lighting_Changed"/>
+              <Slider x:Name="LightElevationSlider" Minimum="-80" Maximum="80" Value="48" ValueChanged="Lighting_Changed"/>
+            </StackPanel>
+          </Border>
+          <Border Background="{DynamicResource PanelRaised}" CornerRadius="10" Padding="11" Margin="0,0,0,12">
+            <StackPanel>
+              <TextBlock Text="{Binding UiText[poses_animations]}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Accent}" Margin="0,0,0,8"/>
+              <TextBlock Text="{Binding UiText[animation_label]}" FontSize="10" Foreground="{DynamicResource TextMuted}"/>
+              <ComboBox x:Name="AnimationPackBox" DisplayMemberPath="DisplayName" SelectionChanged="AnimationPack_SelectionChanged" Margin="0,4,0,7" Height="29" ToolTip="Sky animation and emote pack"/>
+              <TextBlock Text="{Binding UiText[animation_search]}" FontSize="9" Foreground="{DynamicResource TextMuted}" Margin="0,0,0,3"/>
+              <TextBox x:Name="AnimationSearchBox" TextChanged="AnimationSearch_TextChanged" Margin="0,0,0,6" Height="27" ToolTip="Search animation, emote, or pose"/>
+              <ComboBox x:Name="AnimationSegmentBox" DisplayMemberPath="Name" SelectionChanged="AnimationSegment_SelectionChanged" Margin="0,0,0,7" Height="29" ToolTip="Animation clip; scrub the frame slider to hold a pose" IsEnabled="False"/>
+              <TextBlock Text="{Binding UiText[static_poses]}" FontSize="9" Foreground="{DynamicResource TextMuted}" Margin="0,1,0,4"/>
+              <UniformGrid Columns="2" Rows="2" Margin="0,0,0,7">
+                <Button Content="{Binding UiText[pose_stand]}" Tag="idleStandNeutral|idleStand|idleStandWeak" Click="StaticPose_Click" Padding="7,5" Margin="0,0,4,4"/>
+                <Button Content="{Binding UiText[pose_sit]}" Tag="idleSitNeutral|idleSit" Click="StaticPose_Click" Padding="7,5" Margin="4,0,0,4"/>
+                <Button Content="{Binding UiText[pose_squat]}" Tag="idleSquatNeutral|idleSquat" Click="StaticPose_Click" Padding="7,5" Margin="0,4,4,0"/>
+                <Button Content="{Binding UiText[pose_lie]}" Tag="idleSleepNeutral|idleSleep" Click="StaticPose_Click" Padding="7,5" Margin="4,4,0,0"/>
+              </UniformGrid>
+              <DockPanel>
+                <Button x:Name="AnimationPlayButton" Content="{Binding UiText[play]}" Click="AnimationPlay_Click" Padding="10,6" IsEnabled="False"/>
+                <TextBlock x:Name="AnimationFrameText" Text="Frame 0" Foreground="{DynamicResource TextMuted}" FontSize="10" VerticalAlignment="Center" Margin="10,0,0,0"/>
+              </DockPanel>
+              <Slider x:Name="AnimationFrameSlider" Minimum="0" Maximum="0" Value="0" IsEnabled="False" ValueChanged="AnimationFrame_Changed" Margin="0,6,0,0"/>
+              <TextBlock Text="{Binding UiText[animation_help]}" FontSize="9" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+            </StackPanel>
+          </Border>
+          <TextBlock Text="{Binding UiText[current_outfit]}" FontSize="10" Foreground="{DynamicResource TextMuted}"/>
+          <ListBox ItemsSource="{Binding EquippedItems}" MaxHeight="320" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Margin="0,5,0,10" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate><DataTemplate><Border Background="#211F2A" BorderBrush="#34313E" BorderThickness="1" CornerRadius="9" Padding="7" Margin="0,3">
+              <StackPanel>
+              <Grid MinHeight="42">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="27"/></Grid.ColumnDefinitions>
+                <Border Width="36" Height="36" CornerRadius="7" Background="#302D39" VerticalAlignment="Center" HorizontalAlignment="Left">
+                  <Image Source="{Binding IconImage}" Stretch="Uniform" Margin="2"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,2,0">
+                  <TextBlock Text="{Binding EquippedSlotLabel}" FontSize="10" Foreground="{DynamicResource TextMuted}"/>
+                  <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <Button Grid.Column="2" Content="×" Width="24" Height="24" Padding="0" ToolTip="Снять предмет" Click="UnequipItem_Click" VerticalAlignment="Top"/>
+              </Grid>
+              <StackPanel Margin="0,5,0,0">
+                <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsDyeable}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                <TextBlock Text="{Binding DataContext.UiText[dye_primary], RelativeSource={RelativeSource AncestorType=Window}}" FontSize="10" Foreground="{DynamicResource TextMuted}" Margin="46,0,0,1">
+                  <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasPrimaryDye}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                </TextBlock>
+                <ListBox ItemsSource="{Binding PrimaryDyeChoices}" SelectedItem="{Binding SelectedPrimaryMainDye, Mode=TwoWay}" Margin="43,0,0,1" Height="24" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ToolTip="Primary color">
+                  <ListBox.Style><Style TargetType="ListBox"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasPrimaryDye}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ListBox.Style>
+                  <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
+                  <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Width" Value="22"/><Setter Property="Height" Value="22"/><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,1,0"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Ring" Width="21" Height="21" CornerRadius="11" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" Padding="1"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource Accent}"/><Setter TargetName="Ring" Property="BorderThickness" Value="2"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
+                  <ListBox.ItemTemplate><DataTemplate><Grid ToolTip="{Binding Label}"><Ellipse Width="16" Height="16" Fill="{Binding Brush}" Stroke="#8790A0" StrokeThickness="0.7"/><TextBlock Text="∅" FontSize="11" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding IsNone, Converter={StaticResource BooleanToVisibilityConverter}}"/></Grid></DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="{Binding DataContext.UiText[dye_pattern], RelativeSource={RelativeSource AncestorType=Window}}" FontSize="10" Foreground="{DynamicResource TextMuted}" Margin="46,2,0,1">
+                  <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasSecondaryDye}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                </TextBlock>
+                <ListBox ItemsSource="{Binding SecondaryDyeChoices}" SelectedItem="{Binding SelectedSecondaryMainDye, Mode=TwoWay}" Margin="43,0,0,1" Height="24" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ToolTip="Pattern color">
+                  <ListBox.Style><Style TargetType="ListBox"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasSecondaryDye}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ListBox.Style>
+                  <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
+                  <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Width" Value="22"/><Setter Property="Height" Value="22"/><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,1,0"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Ring" Width="21" Height="21" CornerRadius="11" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" Padding="1"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource Accent}"/><Setter TargetName="Ring" Property="BorderThickness" Value="2"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
+                  <ListBox.ItemTemplate><DataTemplate><Grid ToolTip="{Binding Label}"><Ellipse Width="16" Height="16" Fill="{Binding Brush}" Stroke="#8790A0" StrokeThickness="0.7"/><TextBlock Text="∅" FontSize="11" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding IsNone, Converter={StaticResource BooleanToVisibilityConverter}}"/></Grid></DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+                <Expander Header="{Binding DataContext.UiText[dye_variants], RelativeSource={RelativeSource AncestorType=Window}}" Margin="46,1,0,0" FontSize="9" Foreground="{DynamicResource TextMuted}">
+                  <StackPanel Margin="0,2,0,0">
+                    <TextBlock Text="{Binding DataContext.UiText[dye_primary_blend], RelativeSource={RelativeSource AncestorType=Window}}" FontSize="9" Foreground="{DynamicResource TextMuted}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasPrimaryDye}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                    <ComboBox ItemsSource="{Binding PrimaryDyeChoices}" SelectedItem="{Binding SelectedPrimaryBlendDye, Mode=TwoWay}" Height="24" Margin="0,1,0,3"><ComboBox.Style><Style TargetType="ComboBox"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasPrimaryDye}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ComboBox.Style><ComboBox.ItemTemplate><DataTemplate><DockPanel><Border Width="12" Height="12" CornerRadius="6" Background="{Binding Brush}" BorderBrush="#778090" BorderThickness="1" Margin="0,0,7,0"/><TextBlock Text="{Binding Label}"/></DockPanel></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                    <TextBlock Text="{Binding DataContext.UiText[dye_pattern_blend], RelativeSource={RelativeSource AncestorType=Window}}" FontSize="9" Foreground="{DynamicResource TextMuted}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasSecondaryDye}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                    <ComboBox ItemsSource="{Binding SecondaryDyeChoices}" SelectedItem="{Binding SelectedSecondaryBlendDye, Mode=TwoWay}" Height="24" Margin="0,1,0,0"><ComboBox.Style><Style TargetType="ComboBox"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasSecondaryDye}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ComboBox.Style><ComboBox.ItemTemplate><DataTemplate><DockPanel><Border Width="12" Height="12" CornerRadius="6" Background="{Binding Brush}" BorderBrush="#778090" BorderThickness="1" Margin="0,0,7,0"/><TextBlock Text="{Binding Label}"/></DockPanel></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                  </StackPanel>
+                </Expander>
+              </StackPanel>
+              </StackPanel>
+            </Border></DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+          <Border Height="1" Background="#303444" Margin="0,0,0,12"/>
+          <TextBlock Text="{Binding UiText[definition]}" FontSize="10" Foreground="{DynamicResource TextMuted}"/>
+          <TextBlock Text="{Binding SelectedName}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,5,0,15"/>
+          <Border Background="#211F2A" CornerRadius="7" Padding="8" Margin="0,0,0,12">
+            <TextBlock Text="{Binding ShaderStatus}" FontSize="10" Foreground="{DynamicResource Accent}" TextWrapping="Wrap"/>
+          </Border>
+          <Border Height="1" Background="#303444" Margin="0,0,0,15"/>
+          <TextBlock Text="{Binding DetailsText}" FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" LineHeight="23"/>
+          <TextBlock Text="{Binding UiText[dyes]}" FontSize="10" Foreground="{DynamicResource TextMuted}" Margin="0,14,0,7"/>
+          <TextBlock Text="{Binding UiText[dye_help]}" FontSize="10" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,0,0,7"/>
+          <ItemsControl ItemsSource="{Binding SelectedDyeColors}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate><DataTemplate><Border Width="17" Height="17" CornerRadius="8" Background="{Binding Brush}" BorderBrush="#778090" BorderThickness="1" Margin="2" ToolTip="{Binding Details}"/></DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Border Margin="0,12,0,0" Background="#282435" CornerRadius="9" Padding="11"><TextBlock Text="{Binding UiText[scene_hint]}" FontSize="11" Foreground="#C8BDFB" TextWrapping="Wrap"/></Border>
+        </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+    <DockPanel Grid.Row="3" LastChildFill="False" VerticalAlignment="Bottom" Margin="3,9,3,0">
+      <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextMuted}" FontSize="11" DockPanel.Dock="Left"/>
+      <TextBlock Text="GAME FILES · READ ONLY" Foreground="{DynamicResource TextMuted}" FontSize="10" DockPanel.Dock="Right"/>
+    </DockPanel>
+  </Grid>
+</Window>
+
