@@ -57,13 +57,14 @@ internal static class GameAvatarUniformBuffers
         };
         Span<float> vector = stackalloc float[] { value.X, value.Y, value.Z, value.W };
         var byteCount = components * sizeof(float);
+        var elementStride = field.ArrayCount > 1 ? 16 : byteCount;
         for (var i = 0; i < Math.Max(1, field.ArrayCount); i++)
         {
-            var offset = field.Offset + i * byteCount;
+            var offset = field.Offset + i * elementStride;
             for (var component = 0; component < components; component++)
             {
                 var encoded = field.Type == 9
-                    ? unchecked((int)Math.Max(0, vector[component]))
+                    ? unchecked((int)vector[component])
                     : BitConverter.SingleToInt32Bits(vector[component]);
                 BinaryPrimitives.WriteInt32LittleEndian(target.AsSpan(offset + component * sizeof(float), sizeof(float)), encoded);
             }

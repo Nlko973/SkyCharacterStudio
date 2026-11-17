@@ -12,6 +12,7 @@ internal static class GameTextureLoader
     private const uint GlUnsignedByte = 0x1401;
     private const uint GlRgba = 0x1908;
     private const uint GlRgba8 = 0x8058;
+    private const uint GlSrgb8Alpha8 = 0x8C43;
     private const uint GlCompressedRedRgtc1 = 0x8DBB;
     private const uint GlCompressedRgbaBptcUnorm = 0x8E8C;
     private const uint GlCompressedSrgbAlphaBptcUnorm = 0x8E8D;
@@ -74,7 +75,7 @@ internal static class GameTextureLoader
 
         byte[]? bgra = image.InternalFormat switch
         {
-            GlRgba8 when image.GlType == GlUnsignedByte && image.GlFormat == GlRgba => SwizzleRgbaToBgra(image.Data),
+            GlRgba8 or GlSrgb8Alpha8 when image.GlType == GlUnsignedByte && image.GlFormat == GlRgba => SwizzleRgbaToBgra(image.Data),
             GlCompressedRgbaBptcUnorm or GlCompressedSrgbAlphaBptcUnorm => DecodeCompressedKtx(image),
             GlCompressedRedRgtc1 => DecodeCompressedKtx(image),
             _ => null,

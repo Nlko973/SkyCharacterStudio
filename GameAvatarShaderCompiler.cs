@@ -5,6 +5,7 @@ using SPIRVCross.NET;
 using SharpDX.D3DCompiler;
 using HelixToolkit.SharpDX;
 using HelixToolkit.SharpDX.Shaders;
+using SkyModel.Core.Resources;
 
 namespace SkyCharacterStudio;
 
@@ -17,6 +18,7 @@ internal sealed record GameAvatarShaderProgram(
     SharpDX.Direct3D11.InputElement[] VertexInputElements,
     IReadOnlyList<GameShaderUniformBlock> UniformBlocks,
     IReadOnlyList<GameShaderBinding> Bindings,
+    string ShaderGroup,
     string AssetDirectory);
 
 /// <summary>
@@ -35,11 +37,12 @@ internal static class GameAvatarShaderCompiler
 
         shaderName = string.IsNullOrWhiteSpace(shaderName) ? "Avatar" : shaderName.Trim();
         var assetDirectory = FindShaderDirectory(meshPath, shaderName);
+        var shaderGroup = SkyResourceResolver.FindShaderGroup(meshPath, shaderName) ?? string.Empty;
         var key = Path.Combine(assetDirectory, shaderName + "-13h.win");
-        return Cache.GetOrAdd(key, _ => Compile(assetDirectory, shaderName));
+        return Cache.GetOrAdd(key, _ => Compile(assetDirectory, shaderName, shaderGroup));
     }
 
-    private static GameAvatarShaderProgram Compile(string assetDirectory, string shaderName)
+    private static GameAvatarShaderProgram Compile(string assetDirectory, string shaderName, string shaderGroup)
     {
         var vertexPath = Path.Combine(assetDirectory, $"{shaderName}-13h.win.vs.spv");
         var fragmentPath = Path.Combine(assetDirectory, $"{shaderName}-13h.win.fs.spv");
@@ -100,7 +103,7 @@ internal static class GameAvatarShaderCompiler
                 Math.Max(compiled.ByteSize, reflected.ByteSize),
                 reflected.Fields));
         }
-        return new GameAvatarShaderProgram(shaderName, vertexStageSource, fragmentStageSource, vertexBytecode, fragmentBytecode, CreateHelixInputLayout(), uniformBlocks, bindings, assetDirectory);
+        return new GameAvatarShaderProgram(shaderName, vertexStageSource, fragmentStageSource, vertexBytecode, fragmentBytecode, CreateHelixInputLayout(), uniformBlocks, bindings, shaderGroup, assetDirectory);
     }
 
     private static string RenameStageBuffers(string source, string shaderName, string stage)

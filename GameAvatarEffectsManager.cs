@@ -37,23 +37,26 @@ internal sealed class GameAvatarEffectsManager : DefaultEffectsManager
                 // ShaderDefs.lua has several blended Avatar variants whose
                 // names do not contain "Alpha" (Glass, Butterfly, ElderMask).
                 // AlphaTest variants instead stay opaque and rely on discard.
-                BlendStateDescription = IsBlendedAvatarShader(program.ShaderName)
+                BlendStateDescription = IsBlendedAvatarShader(program)
                     ? CreateAlphaBlendState()
                     : null,
-                DepthStencilStateDescription = IsBlendedAvatarShader(program.ShaderName)
-                    ? CreateTransparentDepthState()
+                DepthStencilStateDescription = IsBlendedAvatarShader(program)
+                    ? CreateTransparentDepthState(program.ShaderGroup)
                     : null,
             });
         }
         AddTechnique(new TechniqueDescription(TechniqueName, techniqueLayout!, passes));
     }
 
-    internal static bool IsBlendedAvatarShader(string shaderName) => shaderName is
-        "AvatarScrollAlpha" or "AvatarAlpha" or "AvatarGlass" or
-        "AvatarChamAlpha" or "AvatarChamElderMask" or "AvatarChamGlitterAlpha" or
-        "AvatarChamAlphaFullGlitter" or "AvatarChamButterfly" or "AvatarChamOceanCaustics" or
-        "AvatarOceanCaustics" or "AvatarOceanCausticsClipped" or "AvatarChamGlass" or
-        "AvatarChamBlueTear" or "AvatarChamGlitterAlphaRevamp" or "AvatarChamGlitterAlphaAttrib";
+    internal static bool IsBlendedAvatarShader(GameAvatarShaderProgram program) =>
+        (!string.IsNullOrWhiteSpace(program.ShaderGroup)
+            ? program.ShaderGroup.StartsWith("Blended", StringComparison.OrdinalIgnoreCase)
+            : program.ShaderName is
+                "AvatarScrollAlpha" or "AvatarAlpha" or "AvatarGlass" or
+                "AvatarChamAlpha" or "AvatarChamElderMask" or "AvatarChamGlitterAlpha" or
+                "AvatarChamAlphaFullGlitter" or "AvatarChamButterfly" or "AvatarChamOceanCaustics" or
+                "AvatarOceanCaustics" or "AvatarOceanCausticsClipped" or "AvatarChamGlass" or
+                "AvatarChamBlueTear" or "AvatarChamGlitterAlphaRevamp" or "AvatarChamGlitterAlphaAttrib");
 
     private static BlendStateDescription CreateAlphaBlendState()
     {
@@ -68,11 +71,14 @@ internal sealed class GameAvatarEffectsManager : DefaultEffectsManager
         return state;
     }
 
-    private static DepthStencilStateDescription CreateTransparentDepthState()
+    private static DepthStencilStateDescription CreateTransparentDepthState(string shaderGroup)
     {
         var state = DepthStencilStateDescription.Default();
         state.IsDepthEnabled = true;
-        state.DepthWriteMask = DepthWriteMask.Zero;
+        // Sky's BlendedDepth queue is transparent but retains depth writes.
+        state.DepthWriteMask = shaderGroup.Equals("BlendedDepth", StringComparison.OrdinalIgnoreCase)
+            ? DepthWriteMask.All
+            : DepthWriteMask.Zero;
         state.DepthComparison = Comparison.LessEqual;
         return state;
     }

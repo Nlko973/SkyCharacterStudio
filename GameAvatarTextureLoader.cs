@@ -10,7 +10,7 @@ namespace SkyCharacterStudio;
 /// <summary>Decodes Sky texture assets through the editor's texture decoder for Helix's D3D texture pool.</summary>
 internal static class GameAvatarTextureLoader
 {
-    private static readonly ConcurrentDictionary<string, TextureModel> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<(string Path, bool IsColor), TextureModel> Cache = new();
     private static readonly TextureModel BlackTexture = new([new Color4(0, 0, 0, 0)], 1, 1);
     private static readonly TextureModel FlatNormalTexture = new([new Color4(0.5f, 0.5f, 1, 1)], 1, 1);
     private static readonly TextureModel NeutralLightTexture = new([new Color4(0.5f, 0.5f, 0.5f, 1)], 1, 1);
@@ -28,7 +28,10 @@ internal static class GameAvatarTextureLoader
         var noise = Resolve(item, "Noise2Ch");
         var capeIntegrity = Resolve(item, "CapeIntegrity");
 
-        Add(result, "u_diffuse1Tex", diffuse);
+        // The game samples diffuse/albedo in sRGB and the GPU converts it to
+        // linear before lighting. Mask, normal, and packed attribute maps are
+        // numeric data and must keep their original channel values.
+        Add(result, "u_diffuse1Tex", diffuse, isColor: true);
         // Avatar SPIR-V samples these slots even when the outfit has no dye mask
         // or normal map. Keep the D3D binding valid with neutral data instead of
         // leaving an unbound resource whose sample is driver-dependent.
@@ -53,17 +56,23 @@ internal static class GameAvatarTextureLoader
         return null;
     }
 
-    private static void Add(IDictionary<string, TextureModel> target, string name, string? path, TextureModel? fallback = null)
+    private static void Add(
+        IDictionary<string, TextureModel> target,
+        string name,
+        string? path,
+        TextureModel? fallback = null,
+        bool isColor = false)
     {
         if (path is not null)
         {
-            target[name] = Cache.GetOrAdd(Path.GetFullPath(path), LoadTexture);
+            var key = (Path.GetFullPath(path), isColor);
+            target[name] = Cache.GetOrAdd(key, static cacheKey => LoadTexture(cacheKey.Path, cacheKey.IsColor));
             return;
         }
         if (fallback is not null) target[name] = fallback;
     }
 
-    private static TextureModel LoadTexture(string path)
+    private static TextureModel LoadTexture(string path, bool isColor)
     {
         var source = GameTextureLoader.Load(path) as BitmapSource
             ?? throw new InvalidDataException($"Sky texture could not be decoded: {Path.GetFileName(path)}");
@@ -75,7 +84,16 @@ internal static class GameAvatarTextureLoader
         for (var i = 0; i < colors.Length; i++)
         {
             var offset = i * 4;
-            colors[i] = new Color4(pixels[offset + 2] / 255f, pixels[offset + 1] / 255f, pixels[offset] / 255f, pixels[offset + 3] / 255f);
+            var r = pixels[offset + 2] / 255f;
+            var g = pixels[offset + 1] / 255f;
+            var b = pixels[offset] / 255f;
+            if (isColor)
+            {
+                r = GameColorMath.SrgbToLinear(r);
+                g = GameColorMath.SrgbToLinear(g);
+                b = GameColorMath.SrgbToLinear(b);
+            }
+            colors[i] = new Color4(r, g, b, pixels[offset + 3] / 255f);
         }
         return new TextureModel(colors, bgra.PixelWidth, bgra.PixelHeight);
     }

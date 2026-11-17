@@ -37,3 +37,6 @@ artifacts/
 *.wav
 *.mp3
 *.pdf
+
+# Local reverse-engineering notes (kept out of the public source repo)
+/TECHNICAL_FINDINGS.md

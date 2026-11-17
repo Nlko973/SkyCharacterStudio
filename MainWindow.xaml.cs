@@ -909,7 +909,7 @@ public partial class MainWindow : Window
                     // transform into the geometry so SPIR-V and WPF previews agree.
                     Geometry = GameAvatarGeometryAdapter.Create(part.MeshData, BuildPartTransform(part, parts, bodyBounds)),
                     Material = new GameAvatarMaterial(materialCore),
-                    IsTransparent = GameAvatarEffectsManager.IsBlendedAvatarShader(shader.ShaderName),
+                    IsTransparent = GameAvatarEffectsManager.IsBlendedAvatarShader(shader),
                     IsThrowingShadow = false,
                     EnableViewFrustumCheck = false,
                 };
@@ -1619,19 +1619,25 @@ public partial class MainWindow : Window
         if (defaultHsv is { Length: >= 3 })
         {
             var color = GameColorMath.FromHsvData(defaultHsv);
-            return new Vector4(color.R / 255f, color.G / 255f, color.B / 255f, 1);
+            return ToLinearShaderColor(color);
         }
 
         var preview = GetItemRenderColor(item);
-        return new Vector4(preview.R / 255f, preview.G / 255f, preview.B / 255f, 1);
+        return ToLinearShaderColor(preview);
     }
 
     private static Vector4 GetDyeColor(DyeColorDefinition? dye)
     {
         if (dye?.Hsv is not { Length: >= 3 } hsv) return Vector4.Zero;
-        var rgb = GameColorMath.ToRgb(hsv[0], hsv[1] / 100d, hsv[2] / 100d);
+        var rgb = GameColorMath.SrgbToLinear(GameColorMath.ToRgb(hsv[0], hsv[1] / 100d, hsv[2] / 100d));
         return new Vector4(rgb, 1);
     }
+
+    private static Vector4 ToLinearShaderColor(Color color) => new(
+        GameColorMath.SrgbToLinear(color.R / 255f),
+        GameColorMath.SrgbToLinear(color.G / 255f),
+        GameColorMath.SrgbToLinear(color.B / 255f),
+        1);
 
 
     private IReadOnlyDictionary<string, Matrix4x4> BuildAvatarShaderMatrices()

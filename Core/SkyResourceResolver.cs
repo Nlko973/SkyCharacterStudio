@@ -555,6 +555,24 @@ public static class SkyResourceResolver
         return result;
     }
 
+    public static string? FindShaderGroup(string meshPath, string shaderName)
+    {
+        if (string.IsNullOrWhiteSpace(shaderName)) return null;
+        var path = FindResourceLua(meshPath, "ShaderDefs.lua");
+        if (path is null) return null;
+
+        var text = File.ReadAllText(path);
+        var resourcePattern = @"(?:resource|resourcedef)\s+""Shader""\s+""" + Regex.Escape(shaderName) + @"""\s*\{(?<body>[^}]*)\}";
+        var resource = Regex.Match(text, resourcePattern,
+            RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        if (!resource.Success) return null;
+
+        var group = Regex.Match(resource.Groups["body"].Value,
+            @"\bgroup\s*=\s*""([^""]+)""",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return group.Success ? group.Groups[1].Value : null;
+    }
+
     private static string? FindAssetsRoot(string meshPath)
     {
         var cur = Path.GetDirectoryName(meshPath);

@@ -331,6 +331,31 @@ public static class GameColorMath
         };
         return new Vector3((float)(r + m), (float)(g + m), (float)(b + m));
     }
+
+    /// <summary>Converts an sRGB color value to linear RGB for shader inputs.</summary>
+    public static Vector3 SrgbToLinear(Vector3 srgb) => new(
+        SrgbToLinear(srgb.X),
+        SrgbToLinear(srgb.Y),
+        SrgbToLinear(srgb.Z));
+
+    public static float SrgbToLinear(float value)
+    {
+        value = Math.Clamp(value, 0f, 1f);
+        return value <= 0.04045f
+            ? value / 12.92f
+            : MathF.Pow((value + 0.055f) / 1.055f, 2.4f);
+    }
+
+    public static float LinearToSrgb(float value)
+    {
+        value = Math.Max(0f, value);
+        return value <= 0.0031308f
+            ? value * 12.92f
+            : 1.055f * MathF.Pow(value, 1f / 2.4f) - 0.055f;
+    }
+
+    public static byte LinearToSrgbByte(float value) =>
+        (byte)Math.Clamp((int)MathF.Round(LinearToSrgb(value) * 255f), 0, 255);
 }
 
 public sealed record OutfitPreviewPart(WardrobeEntry Item, SkyModel.Core.Models.MeshData MeshData);

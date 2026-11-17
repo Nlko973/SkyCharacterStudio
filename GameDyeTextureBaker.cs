@@ -35,26 +35,26 @@ internal static class GameDyeTextureBaker
             var maskOffset = (maskY * maskWidth + maskX) * 4;
             var redWeight = maskPixels[maskOffset + 2] / 255f;
             var greenWeight = maskPixels[maskOffset + 1] / 255f;
-            var b = diffusePixels[sourceOffset] / 255f;
-            var g = diffusePixels[sourceOffset + 1] / 255f;
-            var r = diffusePixels[sourceOffset + 2] / 255f;
+            var b = GameColorMath.SrgbToLinear(diffusePixels[sourceOffset] / 255f);
+            var g = GameColorMath.SrgbToLinear(diffusePixels[sourceOffset + 1] / 255f);
+            var r = GameColorMath.SrgbToLinear(diffusePixels[sourceOffset + 2] / 255f);
 
             if (primary is { } primaryColor)
             {
-                r = Lerp(r, primaryColor.R / 255f, redWeight);
-                g = Lerp(g, primaryColor.G / 255f, redWeight);
-                b = Lerp(b, primaryColor.B / 255f, redWeight);
+                r = Lerp(r, GameColorMath.SrgbToLinear(primaryColor.R / 255f), redWeight);
+                g = Lerp(g, GameColorMath.SrgbToLinear(primaryColor.G / 255f), redWeight);
+                b = Lerp(b, GameColorMath.SrgbToLinear(primaryColor.B / 255f), redWeight);
             }
             if (secondary is { } secondaryColor)
             {
-                r = Lerp(r, secondaryColor.R / 255f, greenWeight);
-                g = Lerp(g, secondaryColor.G / 255f, greenWeight);
-                b = Lerp(b, secondaryColor.B / 255f, greenWeight);
+                r = Lerp(r, GameColorMath.SrgbToLinear(secondaryColor.R / 255f), greenWeight);
+                g = Lerp(g, GameColorMath.SrgbToLinear(secondaryColor.G / 255f), greenWeight);
+                b = Lerp(b, GameColorMath.SrgbToLinear(secondaryColor.B / 255f), greenWeight);
             }
 
-            diffusePixels[sourceOffset] = ToByte(b);
-            diffusePixels[sourceOffset + 1] = ToByte(g);
-            diffusePixels[sourceOffset + 2] = ToByte(r);
+            diffusePixels[sourceOffset] = GameColorMath.LinearToSrgbByte(b);
+            diffusePixels[sourceOffset + 1] = GameColorMath.LinearToSrgbByte(g);
+            diffusePixels[sourceOffset + 2] = GameColorMath.LinearToSrgbByte(r);
             // Keep the source alpha byte intact. Texture coverage is independent
             // from the primary/secondary dye mask.
         }
@@ -95,5 +95,4 @@ internal static class GameDyeTextureBaker
     }
 
     private static float Lerp(float from, float to, float weight) => from + (to - from) * Math.Clamp(weight, 0, 1);
-    private static byte ToByte(float value) => (byte)Math.Clamp((int)MathF.Round(value * 255), 0, 255);
 }
