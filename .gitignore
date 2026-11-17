@@ -38,5 +38,9 @@ artifacts/
 *.mp3
 *.pdf
 
+# Editor UI artwork (source assets required by the WPF project)
+!Assets/SkyCharacterStudio.ico
+!Assets/SkyCharacterStudio.png
+
 # Local reverse-engineering notes (kept out of the public source repo)
 /TECHNICAL_FINDINGS.md

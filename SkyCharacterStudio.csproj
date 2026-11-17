@@ -3,10 +3,13 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\SkyCharacterStudio.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="Assets\SkyCharacterStudio.ico" />
+    <Resource Include="Assets\SkyCharacterStudio.png" />
     <PackageReference Include="HelixToolkit.Wpf.SharpDX" Version="3.1.2" />
     <PackageReference Include="SPIRV-Cross.NET" Version="1.0.2" GeneratePathProperty="true" />
     <PackageReference Include="BCnEncoder.Net" Version="2.3.0" />
