@@ -76,7 +76,7 @@
             <ModelVisual3D><ModelVisual3D.Content><Model3DGroup><AmbientLight x:Name="AmbientSceneLight" Color="#777D91"/><DirectionalLight x:Name="KeySceneLight" Color="#FFF4E8" Direction="-1,-2,-3"/><DirectionalLight x:Name="FillSceneLight" Color="#7777BB" Direction="2,1,2"/></Model3DGroup></ModelVisual3D.Content></ModelVisual3D>
             <ModelVisual3D x:Name="MeshVisual" />
           </Viewport3D>
-          <hx:Viewport3DX x:Name="GameShaderViewport" Visibility="Collapsed" ShowViewCube="False" ClipToBounds="True" OITRenderMode="None" BackgroundColor="#10121A" MouseDown="Viewport_MouseDown" MouseUp="Viewport_MouseUp" MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel">
+          <hx:Viewport3DX x:Name="GameShaderViewport" Visibility="Collapsed" ShowViewCube="False" ClipToBounds="True" OITRenderMode="DepthPeeling" BackgroundColor="#10121A" MouseDown="Viewport_MouseDown" MouseUp="Viewport_MouseUp" MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel">
             <hx:Viewport3DX.Camera><hx:PerspectiveCamera x:Name="GameShaderCamera" Position="0,0,5" LookDirection="0,0,-5" UpDirection="0,1,0" FieldOfView="45"/></hx:Viewport3DX.Camera>
             <hx:GroupModel3D x:Name="GameShaderMeshVisual" />
           </hx:Viewport3DX>
