@@ -1,5 +1,6 @@
 ﻿using BCnEncoder.Decoder;
 using BCnEncoder.Shared;
+using System.Buffers.Binary;
 using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -16,6 +17,7 @@ internal static class GameTextureLoader
     private const uint GlCompressedRedRgtc1 = 0x8DBB;
     private const uint GlCompressedRgbaBptcUnorm = 0x8E8C;
     private const uint GlCompressedSrgbAlphaBptcUnorm = 0x8E8D;
+    private const uint DdsFourCcDx10 = 0x30315844;
 
     private static readonly byte[] KtxIdentifier =
     [
@@ -53,6 +55,93 @@ internal static class GameTextureLoader
         lock (CacheGate) Cache[texturePath] = image;
         return image;
     }
+
+    /// <summary>
+    /// Wraps a supported KTX1 image and all of its authored mip levels in a
+    /// DX10 DDS container. The GPU then samples the original BC blocks and
+    /// sRGB format instead of a decoded top mip with regenerated filtering.
+    /// </summary>
+    public static byte[]? BuildDdsFromKtx(string texturePath)
+    {
+        var raw = File.ReadAllBytes(texturePath);
+        if (raw.Length < 68 || !raw.AsSpan(0, KtxIdentifier.Length).SequenceEqual(KtxIdentifier)
+            || ReadUInt32(raw, 12) != KtxEndianLittle)
+            return null;
+
+        var glType = ReadUInt32(raw, 16);
+        var glFormat = ReadUInt32(raw, 24);
+        var internalFormat = ReadUInt32(raw, 28);
+        var width = checked((int)ReadUInt32(raw, 36));
+        var height = checked((int)ReadUInt32(raw, 40));
+        var depth = ReadUInt32(raw, 44);
+        var arrayElements = ReadUInt32(raw, 48);
+        var faces = ReadUInt32(raw, 52);
+        var storedMipCount = Math.Max(1, checked((int)ReadUInt32(raw, 56)));
+        var keyValueBytes = checked((int)ReadUInt32(raw, 60));
+        if (width <= 0 || height <= 0 || depth != 0 || arrayElements != 0 || faces != 1 || storedMipCount > 16)
+            return null;
+
+        var (dxgiFormat, blockBytes, bytesPerPixel) = internalFormat switch
+        {
+            GlCompressedRgbaBptcUnorm => (98u, 16, 0),
+            GlCompressedSrgbAlphaBptcUnorm => (99u, 16, 0),
+            GlCompressedRedRgtc1 => (80u, 8, 0),
+            GlRgba8 when glType == GlUnsignedByte && glFormat == GlRgba => (28u, 0, 4),
+            GlSrgb8Alpha8 when glType == GlUnsignedByte && glFormat == GlRgba => (29u, 0, 4),
+            _ => (0u, 0, 0),
+        };
+        if (dxgiFormat == 0) return null;
+
+        var levels = new List<byte[]>(storedMipCount);
+        var cursor = checked(64 + keyValueBytes);
+        var levelWidth = width;
+        var levelHeight = height;
+        var totalDataBytes = 0;
+        for (var level = 0; level < storedMipCount; level++)
+        {
+            if (cursor + 4 > raw.Length) return null;
+            var imageSize = checked((int)ReadUInt32(raw, cursor));
+            cursor += 4;
+            var expectedSize = bytesPerPixel > 0
+                ? checked(levelWidth * levelHeight * bytesPerPixel)
+                : checked(Math.Max(1, (levelWidth + 3) / 4) * Math.Max(1, (levelHeight + 3) / 4) * blockBytes);
+            if (imageSize != expectedSize || cursor + imageSize > raw.Length) return null;
+            var mip = new byte[imageSize];
+            Buffer.BlockCopy(raw, cursor, mip, 0, imageSize);
+            levels.Add(mip);
+            totalDataBytes = checked(totalDataBytes + imageSize);
+            cursor = checked(cursor + ((imageSize + 3) & ~3));
+            levelWidth = Math.Max(1, levelWidth / 2);
+            levelHeight = Math.Max(1, levelHeight / 2);
+        }
+
+        var dds = new byte[checked(148 + totalDataBytes)];
+        WriteUInt32(dds, 0, 0x20534444); // "DDS "
+        WriteUInt32(dds, 4, 124);
+        WriteUInt32(dds, 8, 0x1 | 0x2 | (bytesPerPixel > 0 ? 0x8u : 0x80000u) | 0x1000 | (storedMipCount > 1 ? 0x20000u : 0u));
+        WriteUInt32(dds, 12, (uint)height);
+        WriteUInt32(dds, 16, (uint)width);
+        var topLinearSize = levels[0].Length;
+        WriteUInt32(dds, 20, (uint)topLinearSize);
+        WriteUInt32(dds, 28, (uint)storedMipCount);
+        WriteUInt32(dds, 76, 32);
+        WriteUInt32(dds, 80, 0x4); // DDPF_FOURCC
+        WriteUInt32(dds, 84, DdsFourCcDx10);
+        WriteUInt32(dds, 108, 0x1000 | (storedMipCount > 1 ? 0x400008u : 0u));
+        WriteUInt32(dds, 128, dxgiFormat);
+        WriteUInt32(dds, 132, 3); // D3D10_RESOURCE_DIMENSION_TEXTURE2D
+        WriteUInt32(dds, 140, 1); // array size
+        var outputCursor = 148;
+        foreach (var mip in levels)
+        {
+            Buffer.BlockCopy(mip, 0, dds, outputCursor, mip.Length);
+            outputCursor += mip.Length;
+        }
+        return dds;
+    }
+
+    private static void WriteUInt32(byte[] data, int offset, uint value) =>
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(offset, sizeof(uint)), value);
 
     private static ImageSource LoadBitmap(string texturePath)
     {

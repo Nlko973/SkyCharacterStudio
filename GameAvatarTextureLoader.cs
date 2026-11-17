@@ -80,6 +80,16 @@ internal static class GameAvatarTextureLoader
 
     private static TextureModel LoadTexture(string path, bool isColor)
     {
+        if (Path.GetExtension(path).Equals(".ktx", StringComparison.OrdinalIgnoreCase)
+            && GameTextureLoader.BuildDdsFromKtx(path) is { } dds)
+        {
+            // Preserve the game's BC format, sRGB/linear sampling mode, and
+            // authored mip chain. Avatar shaders explicitly sample Noise2Ch
+            // at high LODs, so rebuilding mips from only the top bitmap changes
+            // glitter and cape-integrity masks.
+            return new TextureModel(new MemoryStream(dds, writable: false));
+        }
+
         var source = GameTextureLoader.Load(path) as BitmapSource
             ?? throw new InvalidDataException($"Sky texture could not be decoded: {Path.GetFileName(path)}");
         var bgra = new FormatConvertedBitmap(source, System.Windows.Media.PixelFormats.Bgra32, null, 0);
