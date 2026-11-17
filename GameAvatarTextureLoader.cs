@@ -14,6 +14,7 @@ internal static class GameAvatarTextureLoader
     private static readonly TextureModel BlackTexture = new([new Color4(0, 0, 0, 0)], 1, 1);
     private static readonly TextureModel FlatNormalTexture = new([new Color4(0.5f, 0.5f, 1, 1)], 1, 1);
     private static readonly TextureModel NeutralLightTexture = new([new Color4(0.5f, 0.5f, 0.5f, 1)], 1, 1);
+    private static readonly TextureModel NeutralDepthTexture = new([new Color4(1, 1, 1, 1)], 1, 1);
 
     public static IReadOnlyDictionary<string, TextureModel> LoadForItem(WardrobeEntry item)
     {
@@ -42,6 +43,9 @@ internal static class GameAvatarTextureLoader
         Add(result, "u_capeIntegrityNoise", capeIntegrity);
         Add(result, "u_lightPRTex", null, NeutralLightTexture);
         Add(result, "u_lightCSTex", null, NeutralLightTexture);
+        // Replaced by the live opaque scene color during Helix's weighted
+        // transparency pass. A defined fallback avoids sampling an unbound SRV.
+        Add(result, "u_opaqueDepth", null, NeutralDepthTexture);
         return result;
     }
 

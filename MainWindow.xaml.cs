@@ -976,6 +976,8 @@ public partial class MainWindow : Window
         }
     }
 
+    // Render using the game's Avatar SPIR-V-derived shaders. The fallback
+    // textured mesh path cannot reproduce dye, transparency, or material effects.
     private static bool ExperimentalShaderRendererApproved() => true;
 
     private void VerifyShaderFrameAfterRender(int revision)
@@ -1630,7 +1632,10 @@ public partial class MainWindow : Window
         var probeL0 = skyColor * (1f / 0.2820948f);
         return new Dictionary<string, Vector4>(StringComparer.OrdinalIgnoreCase)
         {
-            ["u_sunDir"] = new Vector4(direction, 0),
+            // Sky defines this as the direction the light rays travel, opposite
+            // to the vector from the scene toward the sun. Avatar shaders use
+            // dot(N, -u_sunDir) for direct lighting.
+            ["u_sunDir"] = new Vector4(-direction, 0),
             ["u_sunColor"] = new Vector4(keyColor, 0),
             ["u_averageSkyColor"] = new Vector4(skyColor, 0),
             ["u_averageSkyboxColor"] = new Vector4(skyColor, 0),

@@ -23,6 +23,7 @@ internal static class GameAvatarShaderReflection
     [
         "u_attribTex", "u_diffuse1Tex", "u_diffuse2Tex", "u_lightCSTex",
         "u_lightPRTex", "u_normTex", "u_probeCube", "u_noise", "u_capeIntegrityNoise",
+        "u_opaqueColor", "u_opaqueDepth",
     ];
 
     public static IReadOnlyList<GameShaderUniformBlock> Read(string reflectionPath)

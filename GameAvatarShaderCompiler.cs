@@ -64,8 +64,6 @@ internal static class GameAvatarShaderCompiler
         var helixVertexSource = AdaptVertexInputLayout(vertexSource);
         var vertexStageSource = RenameStageBuffers(helixVertexSource, shaderName, "Vertex");
         var fragmentStageSource = RenameStageBuffers(fragmentSource, shaderName, "Fragment");
-        if (shaderName.StartsWith("Avatar", StringComparison.OrdinalIgnoreCase))
-            fragmentStageSource = ApplyAvatarDisplayTransform(fragmentStageSource);
         var vertexBytecode = CompileHlsl(vertexStageSource, "vs_5_0", vertexPath);
         var fragmentBytecode = CompileHlsl(fragmentStageSource, "ps_5_0", fragmentPath);
 
@@ -106,31 +104,6 @@ internal static class GameAvatarShaderCompiler
                 reflected.Fields));
         }
         return new GameAvatarShaderProgram(shaderName, vertexStageSource, fragmentStageSource, vertexBytecode, fragmentBytecode, CreateHelixInputLayout(), uniformBlocks, bindings, shaderGroup, assetDirectory);
-    }
-
-    private static string ApplyAvatarDisplayTransform(string source)
-    {
-        // The game Avatar shader produces linear HDR scene color. The guide's
-        // reference renderer runs Tonemap_rec709_sRGB at the end of the frame;
-        // this viewport has no scene-wide post pass, so apply its essential
-        // highlight shoulder and sRGB output transfer at the Avatar fragment.
-        var assignment = Regex.Match(source,
-            @"(?m)^(?<indent>\s*)stage_output\.(?<field>\w+)\s*=\s*(?<value>\w+);\s*$");
-        if (!assignment.Success) return source;
-        const string helper = """
-            float3 SkyStudioToneMapLinearToSrgb(float3 linearColor)
-            {
-                float3 exposed = max(linearColor, 0.0f) * 0.65f;
-                float3 mapped = saturate((exposed * (2.51f * exposed + 0.03f)) / (exposed * (2.43f * exposed + 0.59f) + 0.14f));
-                float3 low = mapped * 12.92f;
-                float3 high = 1.055f * pow(mapped, 1.0f / 2.4f) - 0.055f;
-                return lerp(high, low, step(mapped, 0.0031308f));
-            }
-
-            """;
-        var value = assignment.Groups["value"].Value;
-        var replacement = $"{assignment.Groups["indent"].Value}stage_output.{assignment.Groups["field"].Value} = float4(SkyStudioToneMapLinearToSrgb({value}.rgb), {value}.a);";
-        return helper + Regex.Replace(source, Regex.Escape(assignment.Value), _ => replacement, RegexOptions.None, TimeSpan.FromSeconds(1));
     }
 
     private static string RenameStageBuffers(string source, string shaderName, string stage)
