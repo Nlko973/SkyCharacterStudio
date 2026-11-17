@@ -146,8 +146,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         if (_useGameItemIcons && item.MeshPath is not null && !string.IsNullOrWhiteSpace(item.Definition.Icon))
         {
-            var path = SkyResourceResolver.FindTextureFile(item.MeshPath, item.Definition.Icon);
-            if (path is not null && GameTextureLoader.Load(path) is BitmapSource icon) return icon;
+            if (GameIconLoader.Load(item.MeshPath, item.Definition.Icon) is BitmapSource icon) return icon;
         }
         return item.MeshPath is null ? null : MeshThumbnailProvider.GetThumbnail(item);
     }

@@ -30,7 +30,7 @@ internal sealed record AnimationPackOption(string Name, string Path)
         }
     }
 }
-internal sealed record AnimationSegmentOption(string Name, string Glyph, SkyAnimationClip Clip);
+internal sealed record AnimationSegmentOption(string Name, string Glyph, BitmapSource? Icon, SkyAnimationClip Clip);
 internal sealed record BackgroundPresetOption(string Key, string Russian, string English)
 {
     public string Label => English;
@@ -690,7 +690,8 @@ public partial class MainWindow : Window
             var animationList = Path.Combine(Path.GetDirectoryName(selected.Path)!, "AnimationList.dat");
             var clips = await Task.Run(() => SkyAnimationReader.Read(selected.Path, animationList));
             if (revision != Volatile.Read(ref _animationLoadRevision)) return;
-            _animationSegments = clips.Select(clip => new AnimationSegmentOption(clip.Name, AnimationGlyph(clip.Name), clip)).ToList();
+            _animationSegments = await Task.Run(() => clips.Select(clip => new AnimationSegmentOption(
+                clip.Name, AnimationGlyph(clip.Name), GameIconLoader.LoadForClip(selected.Path, clip.Name), clip)).ToList());
             AnimationSearchBox.Clear();
             ApplyAnimationSegmentFilter(selectFirst: true);
             AnimationSegmentBox.IsEnabled = AnimationSegmentBox.Items.Count > 0;
@@ -975,7 +976,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private static bool ExperimentalShaderRendererApproved() => false;
+    private static bool ExperimentalShaderRendererApproved() => true;
 
     private void VerifyShaderFrameAfterRender(int revision)
     {
@@ -1381,7 +1382,6 @@ public partial class MainWindow : Window
         }
         var texture = texturePath is null ? null : GameTextureLoader.Load(texturePath);
         var diffuseIsRamp = diffuseName?.Contains("Ramp", StringComparison.OrdinalIgnoreCase) == true;
-        var rampPreviewBaked = false;
         if (texture is BitmapSource diffuseBitmap && item.MeshPath is not null)
         {
             var maskName = definition.MaskTexture;
@@ -1389,22 +1389,14 @@ public partial class MainWindow : Window
                 ?? SkyResourceResolver.FindTextureFile(item.MeshPath, resolvedMaterial?.MaskTex ?? string.Empty)
                 ?? SkyResourceResolver.FindTextureFile(item.MeshPath, resolvedMaterial?.Diffuse2Tex ?? string.Empty);
             if (maskPath is not null && GameTextureLoader.Load(maskPath) is BitmapSource maskBitmap)
-            {
-                if (diffuseIsRamp)
-                {
-                    var bakedRamp = AvatarRampPreviewBaker.TryBake(item, meshData, maskBitmap);
-                    if (bakedRamp is not null) { texture = bakedRamp; rampPreviewBaked = true; }
-                }
-                else texture = GameDyeTextureBaker.TryBake(item, meshData, diffuseBitmap, maskBitmap, false) ?? texture;
-            }
+                texture = GameDyeTextureBaker.TryBake(item, meshData, diffuseBitmap, maskBitmap, diffuseIsRamp) ?? texture;
         }
         Brush baseBrush;
-        // Avatar ramp textures encode the game's skin/outfit lighting palette;
-        // they are not ordinary garment albedo images. Sampling them directly
-        // paints vivid atlas colors (the old fallback made gowns teal/red/yellow).
-        // Until the full Avatar material pipeline is active, show a neutral
-        // item-color fallback instead of presenting the ramp as a diffuse map.
-        var unsupportedAvatarRamp = diffuseIsRamp && !rampPreviewBaked;
+        // Keep only the known fallback cases neutral; ordinary outfit ramps are
+        // handled by the active game Avatar shader when its resources are available.
+        var unsupportedAvatarRamp = diffuseIsRamp
+            && (definition.Type.Equals("hair", StringComparison.OrdinalIgnoreCase)
+                || definition.Name.Equals("CharSkyKid_Mask_BasicQ", StringComparison.OrdinalIgnoreCase));
         if (texture is null || unsupportedAvatarRamp)
         {
             var previewColor = GetItemRenderColor(item);
