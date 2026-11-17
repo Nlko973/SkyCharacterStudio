@@ -126,11 +126,11 @@
             <StackPanel>
               <TextBlock Text="LIGHTING STUDIO" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Accent}" Margin="0,0,0,8"/>
               <DockPanel><TextBlock Text="Ambient" FontSize="10"/><TextBlock Text="Intensity" FontSize="9" Foreground="{DynamicResource TextMuted}" DockPanel.Dock="Right"/></DockPanel>
-              <Slider x:Name="AmbientIntensitySlider" Minimum="0" Maximum="2" Value="0.8" TickFrequency="0.1" ValueChanged="Lighting_Changed"/>
+              <Slider x:Name="AmbientIntensitySlider" Minimum="0" Maximum="2" Value="0.5" TickFrequency="0.1" ValueChanged="Lighting_Changed"/>
               <DockPanel><TextBlock Text="Key light" FontSize="10"/><TextBlock Text="Intensity" FontSize="9" Foreground="{DynamicResource TextMuted}" DockPanel.Dock="Right"/></DockPanel>
-              <Slider x:Name="KeyIntensitySlider" Minimum="0" Maximum="2" Value="1" TickFrequency="0.1" ValueChanged="Lighting_Changed"/>
+              <Slider x:Name="KeyIntensitySlider" Minimum="0" Maximum="2" Value="0.6" TickFrequency="0.1" ValueChanged="Lighting_Changed"/>
               <DockPanel><TextBlock Text="Fill light" FontSize="10"/><TextBlock Text="Intensity" FontSize="9" Foreground="{DynamicResource TextMuted}" DockPanel.Dock="Right"/></DockPanel>
-              <Slider x:Name="FillIntensitySlider" Minimum="0" Maximum="2" Value="0.55" TickFrequency="0.1" ValueChanged="Lighting_Changed"/>
+              <Slider x:Name="FillIntensitySlider" Minimum="0" Maximum="2" Value="0.25" TickFrequency="0.1" ValueChanged="Lighting_Changed"/>
               <DockPanel><TextBlock Text="Azimuth" FontSize="10"/><TextBlock Text="Elevation" FontSize="9" Foreground="{DynamicResource TextMuted}" DockPanel.Dock="Right"/></DockPanel>
               <Slider x:Name="LightAzimuthSlider" Minimum="-180" Maximum="180" Value="-20" ValueChanged="Lighting_Changed"/>
               <Slider x:Name="LightElevationSlider" Minimum="-80" Maximum="80" Value="48" ValueChanged="Lighting_Changed"/>

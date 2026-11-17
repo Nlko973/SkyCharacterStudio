@@ -146,7 +146,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         if (_useGameItemIcons && item.MeshPath is not null && !string.IsNullOrWhiteSpace(item.Definition.Icon))
         {
-            if (GameIconLoader.Load(item.MeshPath, item.Definition.Icon) is BitmapSource icon) return icon;
+            if (GameIconLoader.Load(item.MeshPath, item.Definition.Icon, item.Definition.IconHsv) is BitmapSource icon) return icon;
         }
         return item.MeshPath is null ? null : MeshThumbnailProvider.GetThumbnail(item);
     }
@@ -501,6 +501,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public async Task ViewSelectedOnlyAsync()
     {
         if (SelectedItem is not { MeshPath: not null } entry) return;
+        if (entry.CanEquip)
+        {
+            // Preview wearables on the current character to preserve other
+            // equipped slots such as a cape/wing while switching the body.
+            await EquipSelectedAsync();
+            return;
+        }
         await LoadItemAsync(entry, showOnly: true);
     }
 

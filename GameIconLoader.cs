@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using SkyModel.Core.Resources;
 
@@ -13,7 +14,7 @@ internal static class GameIconLoader
     private static readonly Dictionary<string, Region> Regions = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object Gate = new();
 
-    public static BitmapSource? Load(string sourcePath, string iconName)
+    public static BitmapSource? Load(string sourcePath, string iconName, float[]? iconHsv = null)
     {
         if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(iconName)) return null;
         if (SkyResourceResolver.FindTextureFile(sourcePath, iconName) is { } direct
@@ -23,12 +24,14 @@ internal static class GameIconLoader
         var atlasPath = SkyResourceResolver.FindTextureFile(sourcePath, region.Atlas);
         if (atlasPath is null || GameTextureLoader.Load(atlasPath) is not BitmapSource atlas) return null;
         var left = Math.Clamp((int)Math.Floor(region.U0 * atlas.PixelWidth), 0, atlas.PixelWidth - 1);
-        var top = Math.Clamp((int)Math.Floor((1 - region.V1) * atlas.PixelHeight), 0, atlas.PixelHeight - 1);
+        // ImageRegion UVs use the same top-down atlas origin as the game UI.
+        // The previous 1-v flip selected an adjacent row of unrelated icons.
+        var top = Math.Clamp((int)Math.Floor(region.V0 * atlas.PixelHeight), 0, atlas.PixelHeight - 1);
         var right = Math.Clamp((int)Math.Ceiling(region.U1 * atlas.PixelWidth), left + 1, atlas.PixelWidth);
-        var bottom = Math.Clamp((int)Math.Ceiling((1 - region.V0) * atlas.PixelHeight), top + 1, atlas.PixelHeight);
+        var bottom = Math.Clamp((int)Math.Ceiling(region.V1 * atlas.PixelHeight), top + 1, atlas.PixelHeight);
         var crop = new CroppedBitmap(atlas, new Int32Rect(left, top, right - left, bottom - top));
         crop.Freeze();
-        return crop;
+        return ConvertAtlasMask(crop, iconHsv);
     }
 
     public static string? FindEmoteIcon(string animationPackPath, string clipName)
@@ -44,6 +47,9 @@ internal static class GameIconLoader
             var bestLength = 0;
             foreach (var entry in doc.RootElement.EnumerateArray())
             {
+                if (!entry.TryGetProperty("type", out var typeValue)
+                    || typeValue.ValueKind != System.Text.Json.JsonValueKind.String
+                    || !string.Equals(typeValue.GetString(), "emote", StringComparison.OrdinalIgnoreCase)) continue;
                 if (!entry.TryGetProperty("icon", out var iconValue)) continue;
                 var icon = iconValue.GetString();
                 if (string.IsNullOrWhiteSpace(icon)) continue;
@@ -64,6 +70,31 @@ internal static class GameIconLoader
     {
         var icon = FindEmoteIcon(animationPackPath, clipName);
         return icon is null ? null : Load(animationPackPath, icon);
+    }
+
+    private static BitmapSource ConvertAtlasMask(BitmapSource source, float[]? hsv)
+    {
+        var converted = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+        var pixels = new byte[checked(converted.PixelWidth * converted.PixelHeight * 4)];
+        converted.CopyPixels(pixels, converted.PixelWidth * 4, 0);
+        var tint = hsv is { Length: >= 3 }
+            ? GameColorMath.FromHsvData(hsv)
+            : Colors.White;
+        for (var i = 0; i < pixels.Length; i += 4)
+        {
+            // UIPackedAtlas images are BC4 single-channel masks (ImageDefs
+            // marks them isIcon); GameTextureLoader exposes that channel as R.
+            // The UI expects it as white coverage/alpha, not a red RGB texture.
+            var alpha = pixels[i + 2];
+            pixels[i] = tint.B;
+            pixels[i + 1] = tint.G;
+            pixels[i + 2] = tint.R;
+            pixels[i + 3] = alpha;
+        }
+        var result = BitmapSource.Create(converted.PixelWidth, converted.PixelHeight, 96, 96,
+            PixelFormats.Bgra32, null, pixels, converted.PixelWidth * 4);
+        result.Freeze();
+        return result;
     }
 
     private static Region? FindRegion(string sourcePath, string iconName)

@@ -1617,8 +1617,11 @@ public partial class MainWindow : Window
         var key = (float)KeyIntensitySlider.Value;
         var ambient = (float)AmbientIntensitySlider.Value;
         var fill = (float)FillIntensitySlider.Value;
-        var keyColor = new Vector3(1.0f, 0.95f, 0.88f) * key;
-        var skyColor = new Vector3(0.32f, 0.36f, 0.46f) * (ambient + fill) * 0.5f;
+        // Keep the editor's approximate probes below the clipping range; the
+        // reference renderer applies a final HDR shoulder that this viewport
+        // cannot reproduce scene-wide.
+        var keyColor = new Vector3(1.0f, 0.95f, 0.88f) * (key * 0.7f);
+        var skyColor = new Vector3(0.32f, 0.36f, 0.46f) * (ambient + fill) * 0.35f;
         // Sky's Avatar fragment shader evaluates ambient irradiance from the
         // six reflected probe SH vectors. Leaving them zero makes ordinary
         // outfits render nearly black even when sun/average colors are set.

@@ -307,15 +307,18 @@ public static class GameColorMath
         var hue = values[0];
         var saturation = values.Length >= 5 ? values[2] : values[1];
         var value = values.Length >= 5 ? values[4] : values[2];
-        return FromHsv(hue, saturation / 100d, value / 100d);
+        return FromHsv(hue, Math.Clamp(saturation / 100d, 0, 1), Math.Clamp(value / 100d, 0, 1));
     }
 
     public static Color FromHsvData(float[]? values) => GetColorFromHsv(values);
 
     public static Color FromHsv(double hue, double saturation, double value)
     {
-        var rgb = ToRgb(hue, saturation, value);
-        return Color.FromRgb((byte)Math.Round(rgb.X * 255), (byte)Math.Round(rgb.Y * 255), (byte)Math.Round(rgb.Z * 255));
+        var rgb = ToRgb(hue, Math.Clamp(saturation, 0, 1), Math.Clamp(value, 0, 1));
+        return Color.FromRgb(
+            (byte)Math.Clamp((int)Math.Round(rgb.X * 255), 0, 255),
+            (byte)Math.Clamp((int)Math.Round(rgb.Y * 255), 0, 255),
+            (byte)Math.Clamp((int)Math.Round(rgb.Z * 255), 0, 255));
     }
 
     public static Vector3 ToRgb(double hue, double saturation, double value)
