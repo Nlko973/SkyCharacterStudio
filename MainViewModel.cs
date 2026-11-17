@@ -25,6 +25,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string _selectedSeason = "All";
     private string _selectedLanguage = "Русский";
     private string _selectedTheme = "Aurora";
+    private string _textureRenderMode = "legacy";
     private bool _useGameItemIcons;
     private string _installPath = DefaultInstall;
     private string _statusText = "Ready";
@@ -67,6 +68,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private static readonly string ItemIconModePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SkyCharacterStudio", "item-icon-mode.txt");
+    private static readonly string TextureRenderModePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SkyCharacterStudio", "texture-render-mode.txt");
     private static readonly string InstallPathFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SkyCharacterStudio", "game-path.txt");
@@ -101,6 +105,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
         catch (IOException) { }
         try
         {
+            var savedMode = File.Exists(TextureRenderModePath) ? File.ReadAllText(TextureRenderModePath).Trim() : string.Empty;
+            if (savedMode is "legacy" or "game-shaders") _textureRenderMode = savedMode;
+        }
+        catch (IOException) { }
+        try
+        {
             var savedPath = File.Exists(InstallPathFile) ? File.ReadAllText(InstallPathFile).Trim() : string.Empty;
             if (!string.IsNullOrWhiteSpace(savedPath)) _installPath = savedPath;
         }
@@ -119,6 +129,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ObservableCollection<string> Languages { get; } = ["Русский", "English"];
     public ObservableCollection<string> ThemeOptions { get; } = ["Aurora", "Ocean", "Rose Nebula", "AMOLED", "Black", "Neon Black", "Neon Purple", "Purple Black", "Neon Purple Black", "White", "Sunset", "Forest", "Sky Blue"];
     public string InstallPath { get => _installPath; set => Set(ref _installPath, value); }
+    public string TextureRenderMode
+    {
+        get => _textureRenderMode;
+        set
+        {
+            if (value is not ("legacy" or "game-shaders") || !Set(ref _textureRenderMode, value)) return;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(TextureRenderModePath)!);
+                File.WriteAllText(TextureRenderModePath, value);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+    public bool UseExperimentalShaderRenderer => TextureRenderMode == "game-shaders";
     public bool UseGameItemIcons
     {
         get => _useGameItemIcons;

@@ -35,6 +35,7 @@ internal sealed record BackgroundPresetOption(string Key, string Russian, string
 {
     public string Label => English;
 }
+internal sealed record TextureRendererOption(string Key, string Russian, string English);
 
 public partial class MainWindow : Window
 {
@@ -124,6 +125,21 @@ public partial class MainWindow : Window
         var language = new ComboBox { ItemsSource = _viewModel.Languages, SelectedItem = _viewModel.SelectedLanguage, MinWidth = 220, Margin = new Thickness(0, 6, 0, 14) };
         var theme = new ComboBox { ItemsSource = _viewModel.ThemeOptions, SelectedItem = _viewModel.SelectedTheme, MinWidth = 220, Margin = new Thickness(0, 6, 0, 14) };
         theme.SelectionChanged += (_, _) => { if (theme.SelectedItem is string value) _viewModel.SelectedTheme = value; };
+        var textureRenderer = new ComboBox
+        {
+            ItemsSource = new[]
+            {
+                new TextureRendererOption("legacy", "Старый preview (стабильный)", "Legacy preview (stable)"),
+                new TextureRendererOption("game-shaders", "Игровые шейдеры (экспериментально)", "Game shaders (experimental)"),
+            },
+            DisplayMemberPath = _viewModel.SelectedLanguage == "English" ? nameof(TextureRendererOption.English) : nameof(TextureRendererOption.Russian),
+            SelectedValuePath = nameof(TextureRendererOption.Key), SelectedValue = _viewModel.TextureRenderMode,
+            Tag = "textureRenderer", MinWidth = 320, Margin = new Thickness(0, 6, 0, 4),
+        };
+        textureRenderer.SelectionChanged += (_, _) =>
+        {
+            if (textureRenderer.SelectedValue is string value) _viewModel.TextureRenderMode = value;
+        };
         var itemIcons = new CheckBox { IsChecked = _viewModel.UseGameItemIcons, Tag = "itemIcons", Margin = new Thickness(0, 2, 0, 12), Foreground = (Brush)Application.Current.Resources["TextPrimary"] };
         itemIcons.Checked += (_, _) => _viewModel.UseGameItemIcons = true;
         itemIcons.Unchecked += (_, _) => _viewModel.UseGameItemIcons = false;
@@ -182,7 +198,7 @@ public partial class MainWindow : Window
                 Child = null
             }
         };
-        settingsContent = CreateSettingsContent(language, theme, background, backgroundHex, itemIcons, path, chooseFolder, scan, photoFolder, changePhotoFolder, exportProfile, importProfile, importLook);
+        settingsContent = CreateSettingsContent(language, theme, background, backgroundHex, itemIcons, textureRenderer, path, chooseFolder, scan, photoFolder, changePhotoFolder, exportProfile, importProfile, importLook);
         ((Border)settingsWindow.Content).Child = settingsContent;
         ApplySettingsLanguage(settingsWindow, settingsContent, background);
         scan.Click += async (_, _) =>
@@ -194,7 +210,7 @@ public partial class MainWindow : Window
         settingsWindow.ShowDialog();
     }
 
-    private static StackPanel CreateSettingsContent(ComboBox language, ComboBox theme, ComboBox background, TextBox backgroundHex, CheckBox itemIcons, TextBox path, Button chooseFolder, Button scan, TextBlock photoFolder, Button changePhotoFolder, Button exportProfile, Button importProfile, Button importLook)
+    private static StackPanel CreateSettingsContent(ComboBox language, ComboBox theme, ComboBox background, TextBox backgroundHex, CheckBox itemIcons, ComboBox textureRenderer, TextBox path, Button chooseFolder, Button scan, TextBlock photoFolder, Button changePhotoFolder, Button exportProfile, Button importProfile, Button importLook)
     {
         var root = new StackPanel();
         root.Children.Add(new TextBlock { Tag = "title", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = (Brush)Application.Current.Resources["TextPrimary"] });
@@ -206,6 +222,8 @@ public partial class MainWindow : Window
         Label(appearance, "language"); appearance.Children.Add(language);
         Label(appearance, "theme"); appearance.Children.Add(theme);
         Label(appearance, "itemDisplay"); appearance.Children.Add(itemIcons);
+        Label(appearance, "textureRendererLabel"); appearance.Children.Add(textureRenderer);
+        appearance.Children.Add(new TextBlock { Tag = "textureRendererHint", TextWrapping = TextWrapping.Wrap, Foreground = (Brush)Application.Current.Resources["TextMuted"], FontSize = 10, Margin = new Thickness(0, 0, 0, 10) });
         Label(appearance, "background"); appearance.Children.Add(background); appearance.Children.Add(backgroundHex);
         Label(appearance, "photoFolderLabel"); appearance.Children.Add(photoFolder); changePhotoFolder.Tag = "changePhoto"; appearance.Children.Add(changePhotoFolder);
         tabs.Items.Add(new TabItem { Header = "◐  Appearance", Content = appearance });
@@ -254,6 +272,10 @@ public partial class MainWindow : Window
             ["title"]="SETTINGS", ["subtitle"]="Personalize the editor and manage your Sky profile", ["language"]="Language", ["theme"]="Theme", ["background"]="Scene background", ["photoFolderLabel"]="\u041f\u0430\u043f\u043a\u0430 \u0441\u043d\u0438\u043c\u043a\u043e\u0432 \u0441\u0446\u0435\u043d\u044b", ["photoFolderValue"]=string.IsNullOrWhiteSpace(_photoFolder) ? "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043f\u0430\u043f\u043a\u0443 \u043f\u0440\u0438 \u043f\u0435\u0440\u0432\u043e\u043c \u0441\u043d\u0438\u043c\u043a\u0435" : _photoFolder, ["gamePath"]="Sky: Children of the Light location", ["profileHeading"]="PROFILE & LOOKS", ["profileDescription"]="Export or import application settings, collections, and saved looks. A single look can also be transferred on its own.", ["aboutHeading"]="ABOUT", ["aboutText"]=$"Sky Character Studio\nCharacter and outfit editor for Sky: Children of the Light.\nVersion {version}\nDeveloper: Niko", ["changePhoto"]="Change photo folder...", ["chooseGame"]="Choose game folder...", ["scanGame"]="Save path and scan", ["exportProfile"]="Export settings and all looks...", ["importProfile"]="Import settings and all looks...", ["importLook"]="Import one look..."
         };
         var labels = en ? enText : ru;
+        labels["textureRendererLabel"] = en ? "Texture rendering" : "Отображение текстур";
+        labels["textureRendererHint"] = en
+            ? "Legacy preview is selected by default. Game shaders are experimental; animations keep the legacy renderer to preserve geometry and cape."
+            : "По умолчанию выбран старый preview. Игровые шейдеры экспериментальны; в анимациях остаётся старый renderer, чтобы сохранить геометрию и накидку.";
         foreach (var element in Descendants(content))
         {
             if (element.Tag is "itemDisplay")
@@ -264,6 +286,12 @@ public partial class MainWindow : Window
             if (element.Tag is "itemIcons" && element is CheckBox gameIcons)
             {
                 gameIcons.Content = en ? "Use game icons instead of 3D previews" : "Игровые иконки вместо 3D-моделей";
+                continue;
+            }
+            if (element.Tag is "textureRenderer" && element is ComboBox rendererMode)
+            {
+                rendererMode.DisplayMemberPath = en ? nameof(TextureRendererOption.English) : nameof(TextureRendererOption.Russian);
+                rendererMode.Items.Refresh();
                 continue;
             }
             if (element.Tag is not string key || !labels.TryGetValue(key, out var label)) continue;
@@ -588,6 +616,7 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainViewModel.SelectedTheme)) ApplyTheme(_viewModel.SelectedTheme);
         if (e.PropertyName == nameof(MainViewModel.SelectedLanguage)) UpdateAnimationControlText();
+        if (e.PropertyName == nameof(MainViewModel.TextureRenderMode)) ApplyTextureRenderMode();
         if (e.PropertyName == nameof(MainViewModel.SelectedItem))
         {
             ObserveDyeItems(_viewModel.SceneParts.Select(part => part.Item).Append(_viewModel.SelectedItem));
@@ -610,6 +639,24 @@ public partial class MainWindow : Window
                 _ = PrepareSelectedGameShaderAsync();
             }
         }
+    }
+
+    private void ApplyTextureRenderMode()
+    {
+        Interlocked.Increment(ref _shaderLoadRevision);
+        if (!_viewModel.UseExperimentalShaderRenderer || _isPosePlaying)
+        {
+            GameShaderViewport.Visibility = Visibility.Collapsed;
+            Viewport.Visibility = Visibility.Visible;
+            if (_activeAnimation is not null && _viewModel.SceneParts.Count > 0)
+                RenderAnimationFrame((int)Math.Round(AnimationFrameSlider.Value));
+            _viewModel.ShaderStatus = _isPosePlaying && _viewModel.UseExperimentalShaderRenderer
+                ? "Playing animations use the legacy preview to preserve the animated geometry and cape."
+                : "Legacy texture preview selected.";
+            return;
+        }
+
+        _ = PrepareSelectedGameShaderAsync();
     }
 
     private void SelectedItemDyeChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -817,7 +864,11 @@ public partial class MainWindow : Window
     {
         var frame = (int)Math.Round(e.NewValue);
         AnimationFrameText.Text = $"{_viewModel.UiText["frame"]} {frame}";
-        if (_activeAnimation is not null && (_animatedMeshes.Count > 0 || _animatedProps.Count > 0)) RenderAnimationFrame(frame);
+        if (_activeAnimation is not null && (_animatedMeshes.Count > 0 || _animatedProps.Count > 0))
+        {
+            UseAnimatedPreviewViewport();
+            RenderAnimationFrame(frame);
+        }
     }
 
     private void UpdateAnimationControlText()
@@ -865,11 +916,13 @@ public partial class MainWindow : Window
 
     private async Task PrepareSelectedGameShaderAsync()
     {
-        if (!ExperimentalShaderRendererApproved())
+        if (!ExperimentalShaderRendererApproved() || _isPosePlaying)
         {
             GameShaderViewport.Visibility = Visibility.Collapsed;
             Viewport.Visibility = Visibility.Visible;
             _viewModel.ShaderStatus = "Откат: SPIR-V shader renderer не прошёл визуальную проверку; используется прежний текстурный preview.";
+            if (_isPosePlaying)
+                _viewModel.ShaderStatus = "Playing animations use the legacy preview to preserve the animated geometry and cape.";
             return;
         }
 
@@ -978,7 +1031,7 @@ public partial class MainWindow : Window
 
     // Render using the game's Avatar SPIR-V-derived shaders. The fallback
     // textured mesh path cannot reproduce dye, transparency, or material effects.
-    private static bool ExperimentalShaderRendererApproved() => true;
+    private bool ExperimentalShaderRendererApproved() => _viewModel.UseExperimentalShaderRenderer;
 
     private void VerifyShaderFrameAfterRender(int revision)
     {
