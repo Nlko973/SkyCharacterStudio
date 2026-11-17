@@ -143,7 +143,9 @@
               <ComboBox x:Name="AnimationPackBox" DisplayMemberPath="DisplayName" SelectionChanged="AnimationPack_SelectionChanged" Margin="0,4,0,7" Height="29" ToolTip="Sky animation and emote pack"/>
               <TextBlock Text="{Binding UiText[animation_search]}" FontSize="9" Foreground="{DynamicResource TextMuted}" Margin="0,0,0,3"/>
               <TextBox x:Name="AnimationSearchBox" TextChanged="AnimationSearch_TextChanged" Margin="0,0,0,6" Height="27" ToolTip="Search animation, emote, or pose"/>
-              <ComboBox x:Name="AnimationSegmentBox" DisplayMemberPath="Name" SelectionChanged="AnimationSegment_SelectionChanged" Margin="0,0,0,7" Height="29" ToolTip="Animation clip; scrub the frame slider to hold a pose" IsEnabled="False"/>
+              <ComboBox x:Name="AnimationSegmentBox" SelectionChanged="AnimationSegment_SelectionChanged" Margin="0,0,0,7" Height="29" ToolTip="Animation clip; scrub the frame slider to hold a pose" IsEnabled="False">
+                <ComboBox.ItemTemplate><DataTemplate><DockPanel LastChildFill="True"><TextBlock Text="{Binding Glyph}" FontSize="17" Width="30" TextAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Accent}"/><TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/></DockPanel></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
               <TextBlock Text="{Binding UiText[static_poses]}" FontSize="9" Foreground="{DynamicResource TextMuted}" Margin="0,1,0,4"/>
               <UniformGrid Columns="2" Rows="2" Margin="0,0,0,7">
                 <Button Content="{Binding UiText[pose_stand]}" Tag="idleStandNeutral|idleStand|idleStandWeak" Click="StaticPose_Click" Padding="7,5" Margin="0,0,4,4"/>

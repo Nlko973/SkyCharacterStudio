@@ -9,6 +9,7 @@ using System.Windows.Media.Imaging;
 using SkyModel.Core.Indexing;
 using SkyModel.Core.Models;
 using SkyModel.Core.Parsing;
+using SkyModel.Core.Resources;
 
 namespace SkyCharacterStudio;
 
@@ -24,6 +25,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string _selectedSeason = "All";
     private string _selectedLanguage = "Русский";
     private string _selectedTheme = "Aurora";
+    private bool _useGameItemIcons;
     private string _installPath = DefaultInstall;
     private string _statusText = "Ready";
     private string _catalogSummary = "Choose a game folder to begin";
@@ -62,6 +64,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private static readonly string ThemePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SkyCharacterStudio", "theme.txt");
+    private static readonly string ItemIconModePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SkyCharacterStudio", "item-icon-mode.txt");
     private static readonly string InstallPathFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SkyCharacterStudio", "game-path.txt");
@@ -92,6 +97,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
             if (ThemeOptions.Contains(savedTheme)) _selectedTheme = savedTheme;
         }
         catch (IOException) { }
+        try { _useGameItemIcons = File.Exists(ItemIconModePath) && File.ReadAllText(ItemIconModePath).Trim() == "game"; }
+        catch (IOException) { }
         try
         {
             var savedPath = File.Exists(InstallPathFile) ? File.ReadAllText(InstallPathFile).Trim() : string.Empty;
@@ -112,6 +119,38 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ObservableCollection<string> Languages { get; } = ["Русский", "English"];
     public ObservableCollection<string> ThemeOptions { get; } = ["Aurora", "Ocean", "Rose Nebula", "AMOLED", "Black", "Neon Black", "Neon Purple", "Purple Black", "Neon Purple Black", "White", "Sunset", "Forest", "Sky Blue"];
     public string InstallPath { get => _installPath; set => Set(ref _installPath, value); }
+    public bool UseGameItemIcons
+    {
+        get => _useGameItemIcons;
+        set
+        {
+            if (!Set(ref _useGameItemIcons, value)) return;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(ItemIconModePath)!);
+                File.WriteAllText(ItemIconModePath, value ? "game" : "model");
+            }
+            catch (IOException) { }
+            _ = RefreshItemIconsAsync();
+        }
+    }
+
+    private async Task RefreshItemIconsAsync()
+    {
+        var entries = WardrobeItems.Concat(EquippedItems).Distinct().ToArray();
+        var results = await Task.Run(() => entries.Select(item => (Item: item, Image: LoadItemIcon(item))).ToArray());
+        foreach (var (item, image) in results) item.SetIconImage(image);
+    }
+
+    private ImageSource? LoadItemIcon(WardrobeEntry item)
+    {
+        if (_useGameItemIcons && item.MeshPath is not null && !string.IsNullOrWhiteSpace(item.Definition.Icon))
+        {
+            var path = SkyResourceResolver.FindTextureFile(item.MeshPath, item.Definition.Icon);
+            if (path is not null && GameTextureLoader.Load(path) is BitmapSource icon) return icon;
+        }
+        return item.MeshPath is null ? null : MeshThumbnailProvider.GetThumbnail(item);
+    }
     public void SaveInstallPath()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(InstallPathFile)!);
@@ -852,7 +891,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         var thumbnails = await Task.Run(() => entries
             .Where(item => item.IconImage is null && item.MeshPath is not null)
-            .Select(item => (Item: item, Image: MeshThumbnailProvider.GetThumbnail(item)))
+            .Select(item => (Item: item, Image: LoadItemIcon(item)))
             .ToArray());
         foreach (var (item, image) in thumbnails)
             if (image is not null) item.SetIconImage(image);
@@ -1012,7 +1051,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         var thumbnails = await Task.Run(() => entries
             .Where(item => item.MeshPath is not null)
-            .Select(item => (Item: item, Image: MeshThumbnailProvider.GetThumbnail(item)))
+            .Select(item => (Item: item, Image: LoadItemIcon(item)))
             .ToArray());
         if (revision != _thumbnailRevision) return;
         foreach (var (item, image) in thumbnails) item.SetIconImage(image);

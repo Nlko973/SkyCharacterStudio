@@ -30,7 +30,7 @@ internal sealed record AnimationPackOption(string Name, string Path)
         }
     }
 }
-internal sealed record AnimationSegmentOption(string Name, SkyAnimationClip Clip);
+internal sealed record AnimationSegmentOption(string Name, string Glyph, SkyAnimationClip Clip);
 internal sealed record BackgroundPresetOption(string Key, string Russian, string English)
 {
     public string Label => English;
@@ -124,6 +124,9 @@ public partial class MainWindow : Window
         var language = new ComboBox { ItemsSource = _viewModel.Languages, SelectedItem = _viewModel.SelectedLanguage, MinWidth = 220, Margin = new Thickness(0, 6, 0, 14) };
         var theme = new ComboBox { ItemsSource = _viewModel.ThemeOptions, SelectedItem = _viewModel.SelectedTheme, MinWidth = 220, Margin = new Thickness(0, 6, 0, 14) };
         theme.SelectionChanged += (_, _) => { if (theme.SelectedItem is string value) _viewModel.SelectedTheme = value; };
+        var itemIcons = new CheckBox { IsChecked = _viewModel.UseGameItemIcons, Tag = "itemIcons", Margin = new Thickness(0, 2, 0, 12), Foreground = (Brush)Application.Current.Resources["TextPrimary"] };
+        itemIcons.Checked += (_, _) => _viewModel.UseGameItemIcons = true;
+        itemIcons.Unchecked += (_, _) => _viewModel.UseGameItemIcons = false;
         var background = new ComboBox
         {
             ItemsSource = new[]
@@ -179,7 +182,7 @@ public partial class MainWindow : Window
                 Child = null
             }
         };
-        settingsContent = CreateSettingsContent(language, theme, background, backgroundHex, path, chooseFolder, scan, photoFolder, changePhotoFolder, exportProfile, importProfile, importLook);
+        settingsContent = CreateSettingsContent(language, theme, background, backgroundHex, itemIcons, path, chooseFolder, scan, photoFolder, changePhotoFolder, exportProfile, importProfile, importLook);
         ((Border)settingsWindow.Content).Child = settingsContent;
         ApplySettingsLanguage(settingsWindow, settingsContent, background);
         scan.Click += async (_, _) =>
@@ -191,7 +194,7 @@ public partial class MainWindow : Window
         settingsWindow.ShowDialog();
     }
 
-    private static StackPanel CreateSettingsContent(ComboBox language, ComboBox theme, ComboBox background, TextBox backgroundHex, TextBox path, Button chooseFolder, Button scan, TextBlock photoFolder, Button changePhotoFolder, Button exportProfile, Button importProfile, Button importLook)
+    private static StackPanel CreateSettingsContent(ComboBox language, ComboBox theme, ComboBox background, TextBox backgroundHex, CheckBox itemIcons, TextBox path, Button chooseFolder, Button scan, TextBlock photoFolder, Button changePhotoFolder, Button exportProfile, Button importProfile, Button importLook)
     {
         var root = new StackPanel();
         root.Children.Add(new TextBlock { Tag = "title", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = (Brush)Application.Current.Resources["TextPrimary"] });
@@ -202,6 +205,7 @@ public partial class MainWindow : Window
         var appearance = Page();
         Label(appearance, "language"); appearance.Children.Add(language);
         Label(appearance, "theme"); appearance.Children.Add(theme);
+        Label(appearance, "itemDisplay"); appearance.Children.Add(itemIcons);
         Label(appearance, "background"); appearance.Children.Add(background); appearance.Children.Add(backgroundHex);
         Label(appearance, "photoFolderLabel"); appearance.Children.Add(photoFolder); changePhotoFolder.Tag = "changePhoto"; appearance.Children.Add(changePhotoFolder);
         tabs.Items.Add(new TabItem { Header = "◐  Appearance", Content = appearance });
@@ -252,6 +256,16 @@ public partial class MainWindow : Window
         var labels = en ? enText : ru;
         foreach (var element in Descendants(content))
         {
+            if (element.Tag is "itemDisplay")
+            {
+                if (element is TextBlock displayLabel) displayLabel.Text = en ? "Item display" : "Отображение предметов";
+                continue;
+            }
+            if (element.Tag is "itemIcons" && element is CheckBox gameIcons)
+            {
+                gameIcons.Content = en ? "Use game icons instead of 3D previews" : "Игровые иконки вместо 3D-моделей";
+                continue;
+            }
             if (element.Tag is not string key || !labels.TryGetValue(key, out var label)) continue;
             if (element is TextBlock textBlock) textBlock.Text = label;
             else if (element is Button button) button.Content = label;
@@ -676,7 +690,7 @@ public partial class MainWindow : Window
             var animationList = Path.Combine(Path.GetDirectoryName(selected.Path)!, "AnimationList.dat");
             var clips = await Task.Run(() => SkyAnimationReader.Read(selected.Path, animationList));
             if (revision != Volatile.Read(ref _animationLoadRevision)) return;
-            _animationSegments = clips.Select(clip => new AnimationSegmentOption(clip.Name, clip)).ToList();
+            _animationSegments = clips.Select(clip => new AnimationSegmentOption(clip.Name, AnimationGlyph(clip.Name), clip)).ToList();
             AnimationSearchBox.Clear();
             ApplyAnimationSegmentFilter(selectFirst: true);
             AnimationSegmentBox.IsEnabled = AnimationSegmentBox.Items.Count > 0;
@@ -709,6 +723,21 @@ public partial class MainWindow : Window
     }
 
     private void AnimationSearch_TextChanged(object sender, TextChangedEventArgs e) => ApplyAnimationSegmentFilter();
+
+    private static string AnimationGlyph(string name)
+    {
+        var value = name.ToLowerInvariant();
+        if (value.Contains("dance") || value.Contains("waltz") || value.Contains("groove")) return "♫";
+        if (value.Contains("walk") || value.Contains("step")) return "♟";
+        if (value.Contains("sit") || value.Contains("rest") || value.Contains("sleep")) return "☾";
+        if (value.Contains("write") || value.Contains("draw") || value.Contains("paint")) return "✎";
+        if (value.Contains("hug") || value.Contains("heart") || value.Contains("love")) return "♡";
+        if (value.Contains("warm") || value.Contains("sun")) return "☀";
+        if (value.Contains("pray") || value.Contains("meditat")) return "✧";
+        if (value.Contains("wave") || value.Contains("hello")) return "⚑";
+        if (value.Contains("fly") || value.Contains("jump")) return "✦";
+        return "◉";
+    }
 
     private void ApplyAnimationSegmentFilter(bool selectFirst = false)
     {
@@ -1351,6 +1380,8 @@ public partial class MainWindow : Window
             texturePath = SkyResourceResolver.FindTextureFile(item.MeshPath, diffuseName);
         }
         var texture = texturePath is null ? null : GameTextureLoader.Load(texturePath);
+        var diffuseIsRamp = diffuseName?.Contains("Ramp", StringComparison.OrdinalIgnoreCase) == true;
+        var rampPreviewBaked = false;
         if (texture is BitmapSource diffuseBitmap && item.MeshPath is not null)
         {
             var maskName = definition.MaskTexture;
@@ -1358,17 +1389,22 @@ public partial class MainWindow : Window
                 ?? SkyResourceResolver.FindTextureFile(item.MeshPath, resolvedMaterial?.MaskTex ?? string.Empty)
                 ?? SkyResourceResolver.FindTextureFile(item.MeshPath, resolvedMaterial?.Diffuse2Tex ?? string.Empty);
             if (maskPath is not null && GameTextureLoader.Load(maskPath) is BitmapSource maskBitmap)
-                texture = GameDyeTextureBaker.TryBake(item, meshData, diffuseBitmap, maskBitmap,
-                    diffuseName?.Contains("Ramp", StringComparison.OrdinalIgnoreCase) == true) ?? texture;
+            {
+                if (diffuseIsRamp)
+                {
+                    var bakedRamp = AvatarRampPreviewBaker.TryBake(item, meshData, maskBitmap);
+                    if (bakedRamp is not null) { texture = bakedRamp; rampPreviewBaked = true; }
+                }
+                else texture = GameDyeTextureBaker.TryBake(item, meshData, diffuseBitmap, maskBitmap, false) ?? texture;
+            }
         }
         Brush baseBrush;
-        var diffuseIsRamp = diffuseName?.Contains("Ramp", StringComparison.OrdinalIgnoreCase) == true;
-        // Plain UV sampling does not reproduce Avatar's hair ramp and gives the
-        // Chibi BasicQ mask a wrong red band. Keep those known neutral fallbacks,
-        // while retaining authored textures for clothing and cape slots.
-        var unsupportedAvatarRamp = diffuseIsRamp
-            && (definition.Type.Equals("hair", StringComparison.OrdinalIgnoreCase)
-                || definition.Name.Equals("CharSkyKid_Mask_BasicQ", StringComparison.OrdinalIgnoreCase));
+        // Avatar ramp textures encode the game's skin/outfit lighting palette;
+        // they are not ordinary garment albedo images. Sampling them directly
+        // paints vivid atlas colors (the old fallback made gowns teal/red/yellow).
+        // Until the full Avatar material pipeline is active, show a neutral
+        // item-color fallback instead of presenting the ramp as a diffuse map.
+        var unsupportedAvatarRamp = diffuseIsRamp && !rampPreviewBaked;
         if (texture is null || unsupportedAvatarRamp)
         {
             var previewColor = GetItemRenderColor(item);
@@ -1405,6 +1441,7 @@ public partial class MainWindow : Window
     {
         var definition = item.Definition;
         if (definition.BaseHsv is { Length: >= 3 }) return GameColorMath.FromHsvData(definition.BaseHsv);
+        if (definition.PrimaryDyeHsv is { Length: >= 3 }) return GameColorMath.FromHsvData(definition.PrimaryDyeHsv);
 
         // These are the neutral, undyed defaults when OutfitDefs has no per-item HSV.
         // The Avatar ramp shader normally supplies these colors; keep the WPF fallback
